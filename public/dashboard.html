@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: #f5f7fa;
+      min-height: 100vh;
+      color: #333;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+    }
+    .sidebar {
+      background: #fff;
+      border-right: 1px solid #e2e8f0;
+      width: 280px;
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+      padding: 2rem 1.5rem;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .sidebar h2 {
+      color: #2d3748;
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 2rem;
+    }
+    .sidebar nav {
+      flex-grow: 1;
+    }
+    .sidebar-link {
+      display: block;
+      color: #4a5568;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1.125rem;
+      margin-bottom: 1rem;
+      transition: background 0.3s ease, color 0.3s ease;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .sidebar-link:hover {
+      background: #e2e8f0;
+      color: #2d3748;
+    }
+    .sidebar-link.active {
+      background: #3182ce;
+      color: white;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(49, 130, 206, 0.4);
+    }
+    .logout-link {
+      color: #718096;
+      font-weight: 600;
+      font-size: 1rem;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+    .logout-link:hover {
+      color: #2d3748;
+    }
+    #main-content {
+      margin-left: 280px;
+      flex: 1;
+      padding: 3rem 3rem 3rem 3rem;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      min-height: 100vh;
+      color: #2d3748;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    #main-content > div {
+      background: transparent;
+      padding: 0;
+      box-shadow: none;
+      border-radius: 0;
+      min-height: auto;
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <h2>Admin Panel</h2>
+    <nav>
+      <a href="#" class="sidebar-link" data-page="manage-course.html">Manage Courses</a>
+      <a href="#" class="sidebar-link" data-page="manage-user.html">Manage Users</a>
+      <!-- Removed Manage Students link as per user request -->
+    </nav>
+    <div>
+      <a href="login.html" class="logout-link">Logout</a>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div id="main-content">
+    <div>
+      <h1>Welcome to Admin Dashboard</h1>
+      <p>Select a module from the sidebar to get started.</p>
+    </div>
+  </div>
+
+  <script>
+    const sidebarLinks = document.querySelectorAll('.sidebar-link');
+    const mainContent = document.getElementById('main-content');
+
+    async function loadPage(page) {
+      try {
+        const response = await fetch(page);
+        const html = await response.text();
+        mainContent.innerHTML = html;
+      } catch (error) {
+        console.error('Error loading page:', error);
+        mainContent.innerHTML = '<div style="padding: 1.5rem; color: #e53e3e;">Error loading content.</div>';
+      }
+    }
+
+    function setActiveLink(activePage) {
+      sidebarLinks.forEach(link => {
+        if (link.getAttribute('data-page') === activePage) {
+          link.classList.add('active');
+        } else {
+          link.classList.remove('active');
+        }
+      });
+    }
+
+    sidebarLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const page = e.target.getAttribute('data-page');
+        loadPage(page);
+        setActiveLink(page);
+      });
+    });
+
+    // Load manage courses by default on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      const defaultPage = 'manage-course.html';
+      loadPage(defaultPage);
+      setActiveLink(defaultPage);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "multiple-websites",
+  "version": "1.0.0",
+  "description": "host multiple websites under /public directory and static serve them dynamically using nodejs app",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
