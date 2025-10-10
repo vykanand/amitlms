@@ -1,30 +1,254 @@
-<div style="padding: 1.5rem; max-width: 900px; margin: 2rem auto; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #2d3748;">
-  <h1 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 1.5rem;">Manage Courses</h1>
-  <button style="background: linear-gradient(90deg, #3182ce, #d53f8c); color: white; padding: 0.5rem 1.25rem; border-radius: 8px; font-weight: 600; border: none; cursor: pointer; margin-bottom: 1.5rem; transition: background 0.3s ease;">
-    Add New Course
-  </button>
-  <div style="display: flex; flex-direction: column; gap: 1.25rem;">
-    <div style="background: #edf2f7; border-radius: 12px; padding: 1rem 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <div style="font-weight: 700; font-size: 1.25rem;">UPSC Prarambh</div>
-        <div style="color: #718096;">Duration: 6 months</div>
-        <div style="color: #718096;">Price: $100</div>
-      </div>
-      <div>
-        <button style="color: #3182ce; font-weight: 600; background: none; border: none; cursor: pointer; margin-right: 1rem;">Edit</button>
-        <button style="color: #e53e3e; font-weight: 600; background: none; border: none; cursor: pointer;">Delete</button>
-      </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Manage Courses</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: #f5f7fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #2d3748;
+    }
+    .card {
+      background: #edf2f7;
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .btn-primary {
+      background: linear-gradient(90deg, #3182ce, #d53f8c);
+      color: white;
+      padding: 0.5rem 1.25rem;
+      border-radius: 8px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(90deg, #2c5282, #b83280);
+    }
+    .btn-edit {
+      color: #3182ce;
+      font-weight: 600;
+      background: none;
+      border: none;
+      cursor: pointer;
+      margin-right: 1rem;
+    }
+    .btn-delete {
+      color: #e53e3e;
+      font-weight: 600;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    .form-container {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      margin-bottom: 1.5rem;
+      display: none;
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+    }
+    .video-input {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .video-input input {
+      flex: 1;
+      margin-right: 0.5rem;
+    }
+    .remove-video-btn {
+      background: #e53e3e;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 0.25rem 0.5rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div style="padding: 1.5rem; max-width: 900px; margin: 2rem auto; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+    <h1 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 1.5rem;">Manage Courses</h1>
+    <button id="add-btn" class="btn-primary">Add New Course</button>
+    <div id="form-container" class="form-container">
+      <h2 id="form-title" style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem;">Add Course</h2>
+      <form id="course-form">
+        <div class="form-group">
+          <label for="coursename">Course Name</label>
+          <input type="text" id="coursename" required>
+        </div>
+        <div class="form-group">
+          <label for="coursepic">Course Picture URL</label>
+          <input type="url" id="coursepic">
+        </div>
+        <div class="form-group">
+          <label for="coursedesc">Course Description</label>
+          <textarea id="coursedesc" rows="3" required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="duration">Duration</label>
+          <input type="text" id="duration" required>
+        </div>
+        <div class="form-group">
+          <label>Course Videos (Google Drive Links)</label>
+          <div id="videos-container">
+            <!-- Video inputs will be added here -->
+          </div>
+          <button type="button" id="add-video-btn" class="btn-primary" style="margin-top: 0.5rem;">Add Video</button>
+        </div>
+        <button type="submit" class="btn-primary">Save</button>
+        <button type="button" id="cancel-btn" class="btn-primary" style="background: #e53e3e; margin-left: 1rem;">Cancel</button>
+      </form>
     </div>
-    <div style="background: #edf2f7; border-radius: 12px; padding: 1rem 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <div style="font-weight: 700; font-size: 1.25rem;">UPSC Sankalp</div>
-        <div style="color: #718096;">Duration: 1 year</div>
-        <div style="color: #718096;">Price: $200</div>
-      </div>
-      <div>
-        <button style="color: #3182ce; font-weight: 600; background: none; border: none; cursor: pointer; margin-right: 1rem;">Edit</button>
-        <button style="color: #e53e3e; font-weight: 600; background: none; border: none; cursor: pointer;">Delete</button>
-      </div>
+    <div id="courses-container" style="display: flex; flex-direction: column; gap: 1.25rem;">
+      <!-- Courses will be loaded here -->
     </div>
   </div>
-</div>
+
+  <script>
+    let editingId = null;
+
+    // Fetch and render courses
+    function loadCourses() {
+      fetch('/api/courses')
+        .then(response => response.json())
+        .then(courses => {
+          const container = document.getElementById('courses-container');
+          container.innerHTML = courses.map(course => `
+            <div class="card">
+              <div>
+                <div style="font-weight: 700; font-size: 1.25rem;">${course.coursename}</div>
+                <div style="color: #718096;">Duration: ${course.duration}</div>
+                <div style="color: #718096;">Videos: ${course.coursevids.length}</div>
+              </div>
+              <div>
+                <button class="btn-edit" onclick="editCourse(${course.id})">Edit</button>
+                <button class="btn-delete" onclick="deleteCourse(${course.id})">Delete</button>
+              </div>
+            </div>
+          `).join('');
+        })
+        .catch(error => {
+          console.error('Error fetching courses:', error);
+        });
+    }
+
+    // Show form for adding
+    document.getElementById('add-btn').addEventListener('click', () => {
+      editingId = null;
+      document.getElementById('form-title').textContent = 'Add Course';
+      document.getElementById('course-form').reset();
+      clearVideos();
+      document.getElementById('form-container').style.display = 'block';
+    });
+
+    // Cancel form
+    document.getElementById('cancel-btn').addEventListener('click', () => {
+      document.getElementById('form-container').style.display = 'none';
+    });
+
+    // Submit form
+    document.getElementById('course-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const data = {
+        coursename: document.getElementById('coursename').value,
+        coursepic: document.getElementById('coursepic').value,
+        coursedesc: document.getElementById('coursedesc').value,
+        duration: document.getElementById('duration').value,
+        coursevids: getVideos()
+      };
+      const method = editingId ? 'PUT' : 'POST';
+      const url = editingId ? `/api/courses/${editingId}` : '/api/courses';
+      fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      .then(response => response.json())
+      .then(() => {
+        document.getElementById('form-container').style.display = 'none';
+        loadCourses();
+      })
+      .catch(error => console.error('Error saving course:', error));
+    });
+
+    // Edit course
+    function editCourse(id) {
+      fetch(`/api/courses/${id}`)
+        .then(response => response.json())
+        .then(course => {
+          editingId = id;
+          document.getElementById('form-title').textContent = 'Edit Course';
+          document.getElementById('coursename').value = course.coursename;
+          document.getElementById('coursepic').value = course.coursepic;
+          document.getElementById('coursedesc').value = course.coursedesc;
+          document.getElementById('duration').value = course.duration;
+          setVideos(course.coursevids);
+          document.getElementById('form-container').style.display = 'block';
+        })
+        .catch(error => console.error('Error fetching course:', error));
+    }
+
+    // Delete course
+    function deleteCourse(id) {
+      if (confirm('Are you sure you want to delete this course?')) {
+        fetch(`/api/courses/${id}`, { method: 'DELETE' })
+          .then(() => loadCourses())
+          .catch(error => console.error('Error deleting course:', error));
+      }
+    }
+
+    // Add video input
+    document.getElementById('add-video-btn').addEventListener('click', () => addVideoInput());
+
+    function addVideoInput(value = '') {
+      const container = document.getElementById('videos-container');
+      const div = document.createElement('div');
+      div.className = 'video-input';
+      div.innerHTML = `<input type="url" value="${value}" placeholder="Google Drive link"> <button type="button" class="remove-video-btn">Remove</button>`;
+      div.querySelector('.remove-video-btn').addEventListener('click', () => div.remove());
+      container.appendChild(div);
+    }
+
+    function getVideos() {
+      return Array.from(document.querySelectorAll('#videos-container input')).map(input => input.value).filter(v => v.trim());
+    }
+
+    function setVideos(videos) {
+      const container = document.getElementById('videos-container');
+      container.innerHTML = '';
+      videos.forEach(video => addVideoInput(video));
+    }
+
+    function clearVideos() {
+      document.getElementById('videos-container').innerHTML = '';
+    }
+
+    // Load courses on page load
+    loadCourses();
+  </script>
+</body>
+</html>
