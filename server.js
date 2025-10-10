@@ -35,24 +35,6 @@ db.connect((err) => {
         console.error('Error creating table:', err);
       } else {
         console.log('Table courses created or already exists');
-        // Alter coursevids to TEXT if not already
-        const alterQuery = 'ALTER TABLE courses MODIFY coursevids TEXT;';
-        db.query(alterQuery, (err) => {
-          if (err) {
-            console.log('Alter table (may already be TEXT):', err.message);
-          } else {
-            console.log('Altered coursevids to TEXT');
-          }
-        });
-        // Add price column if not exists
-        const alterPriceQuery = 'ALTER TABLE courses ADD COLUMN IF NOT EXISTS price DECIMAL(10,2) DEFAULT 0;';
-        db.query(alterPriceQuery, (err) => {
-          if (err) {
-            console.log('Alter table add price (may already exist):', err.message);
-          } else {
-            console.log('Added price column');
-          }
-        });
       }
     });
     // Create users table if not exists
@@ -446,10 +428,10 @@ app.get("*", (req, res) => {
   res.status(404).send("Website not found!");
 });
 
-if (require.main === module) {
-  app.listen(port, () => {
-    console.log(`Server is running at http://localhost:${port}`);
-  });
-}
+// if (require.main === module) {
+//   app.listen(port, () => {
+//     console.log(`Server is running at http://localhost:${port}`);
+//   });
+// }
 
 module.exports = app;
