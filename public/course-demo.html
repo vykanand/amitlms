@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Course Details</title>
+  <title>Course Preview</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
@@ -63,6 +63,19 @@
       line-height: 1.6;
       color: #4a5568;
     }
+    .pay-button {
+      background: linear-gradient(90deg, #3182ce, #d53f8c);
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-block;
+      transition: background 0.3s ease;
+    }
+    .pay-button:hover {
+      background: linear-gradient(90deg, #2c5282, #b83280);
+    }
     .demo-video {
       margin-bottom: 3rem;
     }
@@ -72,12 +85,48 @@
       margin-bottom: 1rem;
       color: #2d3748;
     }
+    .demo-video .demo-player {
+      position: relative;
+      width: 100%;
+      height: 400px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      cursor: pointer;
+    }
+    .demo-video .demo-thumbnail {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .demo-video .demo-play-button {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80px;
+      height: 80px;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 30px;
+      transition: background 0.3s ease;
+      box-shadow: 0 0 12px rgba(0,0,0,0.5);
+    }
+    .demo-video .demo-play-button:hover {
+      background: rgba(0, 0, 0, 0.9);
+    }
     .demo-video iframe {
       width: 100%;
       height: 400px;
       border-radius: 12px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.1);
       border: none;
+      display: none;
     }
     .course-videos {
       margin-top: 1rem;
@@ -158,6 +207,14 @@
       font-size: 1rem;
       color: #718096;
     }
+    .locked {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    .locked .play-button::before {
+      content: '🔒';
+      font-size: 24px;
+    }
 
     @media (max-width: 768px) {
       .course-header {
@@ -201,15 +258,23 @@
           Loading course details...
         </p>
       </div>
+      <div class="pay-section">
+        <span id="course-price" class="text-lg font-bold text-blue-600 mr-4">Loading...</span>
+        <button id="pay-button" class="pay-button">Pay Now</button>
+      </div>
     </section>
 
     <section class="demo-video">
-      <h2>Watch This Course</h2>
+      <h2>Watch This Course Preview</h2>
+      <div class="demo-player" id="demo-player">
+        <img id="demo-thumbnail" src="" alt="Demo Video Thumbnail" class="demo-thumbnail" />
+        <div class="demo-play-button" id="demo-play-button">▶</div>
+      </div>
       <iframe id="demo-iframe" src="" title="Demo Video" allowfullscreen></iframe>
     </section>
 
     <section class="course-videos">
-      <h2>Course Videos</h2>
+      <h2>Course Videos (Locked - Enroll to Access)</h2>
       <ul id="video-list" class="video-list">
         <!-- Videos will be loaded here -->
       </ul>
@@ -290,9 +355,13 @@
           document.getElementById('course-photo').src = course.coursepic || 'https://via.placeholder.com/240x140.png?text=Course+Photo';
           document.getElementById('course-title').textContent = course.coursename;
           document.getElementById('course-description').textContent = course.coursedesc;
+          document.getElementById('course-price').textContent = `₹${course.price || 'N/A'}`;
 
           // Populate videos
           const videoList = document.getElementById('video-list');
+          const demoPlayer = document.getElementById('demo-player');
+          const demoThumbnail = document.getElementById('demo-thumbnail');
+          const demoPlayButton = document.getElementById('demo-play-button');
           const demoIframe = document.getElementById('demo-iframe');
 
           if (course.coursevids && course.coursevids.length > 0) {
@@ -318,17 +387,28 @@
               }
             });
 
-            // Set demo video to first video if not Drive
+            // Set demo video thumbnail to first video if not Drive
             if (videos.length > 0 && !videos[0].url.includes('drive.google.com')) {
+              demoThumbnail.src = videos[0].thumbnail || course.coursepic || 'https://via.placeholder.com/400x225.png?text=Demo+Video';
+              demoPlayer.style.display = 'block';
+              demoIframe.style.display = 'none';
               demoIframe.src = videos[0].url;
+
+              // Add click handler to play button
+              demoPlayButton.onclick = () => {
+                demoPlayer.style.display = 'none';
+                demoIframe.style.display = 'block';
+              };
+            } else {
+              demoPlayer.style.display = 'none';
             }
 
-            // Render video list
-            videoList.innerHTML = videos.map(video => `
-              <li class="video-item" data-url="${video.url}" data-original="${video.originalUrl}">
+            // Render video list: first video playable, rest locked
+            videoList.innerHTML = videos.map((video, index) => `
+              <li class="video-item ${index > 0 ? 'locked' : ''}" data-url="${video.url}" data-original="${video.originalUrl}" data-index="${index}">
                 <div class="video-thumbnail">
                   <img src="${video.thumbnail}" alt="${video.title} Thumbnail" />
-                  <div class="play-button">▶</div>
+                  <div class="play-button">${index > 0 ? '' : '▶'}</div>
                 </div>
                 <div class="video-info">
                   <div class="video-title">${video.title}</div>
@@ -337,24 +417,31 @@
               </li>
             `).join('');
 
-            // Add click handlers
+            // Add click handlers: first video plays in demo, rest are locked
             document.querySelectorAll('.video-item').forEach(item => {
-              item.addEventListener('click', () => {
-                const url = item.getAttribute('data-url');
-                const originalUrl = item.getAttribute('data-original');
-                if (originalUrl.includes('drive.google.com')) {
-                  window.open(originalUrl, '_blank');
-                } else {
-                  let embedUrl = url;
-                  if (url.includes('youtube.com/embed/')) {
-                    embedUrl += (url.includes('?') ? '&' : '?') + 'autoplay=1';
+              const index = parseInt(item.getAttribute('data-index'));
+              if (index === 0) {
+                item.addEventListener('click', () => {
+                  const url = item.getAttribute('data-url');
+                  const originalUrl = item.getAttribute('data-original');
+                  if (originalUrl.includes('drive.google.com')) {
+                    window.open(originalUrl, '_blank');
+                  } else {
+                    demoPlayer.style.display = 'none';
+                    demoIframe.style.display = 'block';
+                    let embedUrl = url;
+                    if (url.includes('youtube.com/embed/')) {
+                      embedUrl += (url.includes('?') ? '&' : '?') + 'autoplay=1';
+                    }
+                    demoIframe.src = embedUrl;
                   }
-                  demoIframe.src = embedUrl;
-                }
-              });
+                });
+              }
+              // Rest are locked, no handlers
             });
           } else {
             videoList.innerHTML = '<li>No videos available for this course.</li>';
+            demoPlayer.style.display = 'none';
           }
         })
         .catch(error => {
@@ -375,6 +462,29 @@
         header.classList.remove('fade-out');
       }
       prevScrollY = currentScrollY;
+    });
+
+    // Pay button click
+    document.getElementById('pay-button').addEventListener('click', () => {
+      const user = JSON.parse(localStorage.getItem('user'));
+      if (user) {
+        // Add to cart if not already
+        let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        if (!cart.includes(courseId)) {
+          cart.push(courseId);
+          localStorage.setItem('cart', JSON.stringify(cart));
+        }
+        // Redirect to student dashboard
+        window.location.href = 'studentdashboard.html';
+      } else {
+        // Redirect to login, store in temporary cart
+        let tempCart = JSON.parse(localStorage.getItem('tempCart') || '[]');
+        if (!tempCart.includes(courseId)) {
+          tempCart.push(courseId);
+          localStorage.setItem('tempCart', JSON.stringify(tempCart));
+        }
+        window.location.href = 'studentlogin.html';
+      }
     });
   </script>
 </body>

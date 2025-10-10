@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 2rem;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    .logout-btn {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .logout-btn:hover {
+      background-color: #c82333;
+    }
+    .courses-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .course-card {
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+    }
+    .course-card img {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 4px;
+      margin-right: 1rem;
+    }
+    .course-info h3 {
+      margin: 0 0 0.5rem 0;
+    }
+    .course-info p {
+      margin: 0.25rem 0;
+      color: #666;
+    }
+    .no-courses {
+      text-align: center;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="user-info">
+      <p>Logged in as: <span id="user-phone"></span></p>
+    </div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+  <h1>My Courses</h1>
+  <div id="courses-container" class="courses-container">
+    <!-- Courses will be loaded here -->
+  </div>
+
+  <h2>Cart</h2>
+  <div id="cart-container" class="courses-container">
+    <!-- Cart courses will be loaded here -->
+  </div>
+
+  <h2>All Courses</h2>
+  <div id="all-courses-container" class="courses-container">
+    <!-- All courses will be loaded here -->
+  </div>
+
+  <script>
+    // Check if user is logged in
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) {
+      window.location.href = 'studentlogin.html';
+    }
+
+    // Display user phone
+    document.getElementById('user-phone').textContent = user.phone;
+
+    // Load user's courses
+    async function loadCourses() {
+      const container = document.getElementById('courses-container');
+
+      try {
+        const response = await fetch('/api/user/courses?phone=' + encodeURIComponent(user.phone));
+        const userCourses = await response.json();
+
+        if (!userCourses || userCourses.length === 0) {
+          container.innerHTML = '<p class="no-courses">No courses purchased yet.</p>';
+          return;
+        }
+
+        container.innerHTML = userCourses.map(course => `
+          <a href="course.html?id=${course.id}" style="text-decoration: none; color: inherit;">
+            <div class="course-card">
+              <img src="${course.coursepic || 'https://via.placeholder.com/100'}" alt="${course.coursename}" />
+              <div class="course-info">
+                <h3>${course.coursename}</h3>
+                <p>${course.coursedesc}</p>
+                <p>Duration: ${course.duration}</p>
+                <p>Price: ₹${course.price}</p>
+              </div>
+            </div>
+          </a>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading courses:', error);
+        container.innerHTML = '<p class="no-courses">Error loading courses.</p>';
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('user');
+      window.location.href = 'studentlogin.html';
+    }
+
+    // Load cart
+    async function loadCart() {
+      const container = document.getElementById('cart-container');
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      if (cart.length === 0) {
+        container.innerHTML = '<p class="no-courses">No courses in cart.</p>';
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/courses');
+        const allCourses = await response.json();
+        const cartCourses = allCourses.filter(course => cart.includes(course.id.toString()) && !user.courses.includes(course.id));
+
+        if (cartCourses.length === 0) {
+          container.innerHTML = '<p class="no-courses">No courses in cart.</p>';
+          return;
+        }
+
+        const coursesHtml = cartCourses.map(course => `
+          <div class="course-card">
+            <img src="${course.coursepic || 'https://via.placeholder.com/100'}" alt="${course.coursename}" />
+            <div class="course-info">
+              <h3>${course.coursename}</h3>
+              <p>${course.coursedesc}</p>
+              <p>Duration: ${course.duration}</p>
+              <p>Price: ₹${course.price}</p>
+            </div>
+          </div>
+        `).join('');
+
+        const total = cartCourses.reduce((sum, course) => sum + parseInt(course.price), 0);
+
+        container.innerHTML = `
+          ${coursesHtml}
+          <div style="margin-top: 1rem; padding: 1rem; background: #e8f5e8; border-radius: 8px; text-align: right;">
+            <h3>Total: ₹${total}</h3>
+            <button onclick="payForCart(${total})" style="background: #28a745; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; font-size: 1rem; cursor: pointer;">Pay Now for All</button>
+          </div>
+        `;
+      } catch (error) {
+        console.error('Error loading cart:', error);
+        container.innerHTML = '<p class="no-courses">Error loading cart.</p>';
+      }
+    }
+
+    function payForCart(total) {
+      const orderId = 'cart-' + user.phone + '-' + Date.now();
+      window.location.href = `pay.html?amount=${total}&orderId=${orderId}`;
+    }
+
+    // Load all courses
+    async function loadAllCourses() {
+      const container = document.getElementById('all-courses-container');
+
+      try {
+        const response = await fetch('/api/courses');
+        const allCourses = await response.json();
+        const availableCourses = allCourses.filter(course => !user.courses.includes(course.id));
+
+        if (availableCourses.length === 0) {
+          container.innerHTML = '<p class="no-courses">No courses available.</p>';
+          return;
+        }
+
+        container.innerHTML = availableCourses.map(course => `
+          <div class="course-card">
+            <img src="${course.coursepic || 'https://via.placeholder.com/100'}" alt="${course.coursename}" />
+            <div class="course-info">
+              <h3>${course.coursename}</h3>
+              <p>${course.coursedesc}</p>
+              <p>Duration: ${course.duration}</p>
+              <p>Price: ₹${course.price}</p>
+              <button onclick="addToCart(${course.id})">Add to Cart</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading all courses:', error);
+        container.innerHTML = '<p class="no-courses">Error loading courses.</p>';
+      }
+    }
+
+    function addToCart(courseId) {
+      courseId = courseId.toString();
+      let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      if (!cart.includes(courseId)) {
+        cart.push(courseId);
+        localStorage.setItem('cart', JSON.stringify(cart));
+        location.reload();
+      }
+    }
+
+    // Load courses and cart on page load
+    loadCourses();
+    loadCart();
+    loadAllCourses();
+  </script>
+</body>
+</html>

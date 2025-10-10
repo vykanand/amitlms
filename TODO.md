@@ -1,16 +1,8 @@
-# TODO: Implement YouTube Metadata Extraction and Preview in LMS
+# LMS Pay Button and Cart Implementation
 
 ## Tasks
 
-- [x] Modify public/dashboard.html to support YouTube video previews and metadata extraction
-- [x] Update public/course.html to display videos using metadata objects instead of strings
-- [x] Document the new video metadata format in README.md
-- [x] Implementation complete - testing requires server startup and browser interaction
-
-## Details
-
-- In dashboard.html, add a preview section that appears when pasting YouTube URLs
-- Use YouTube oEmbed API to fetch title, author, thumbnail, and other metadata
-- Store videos as array of objects: {url, title, author, thumbnail, duration, ...}
-- Update course.html to use real metadata for display
-- Ensure backward compatibility if existing courses have string arrays
+- [x] Modify course-demo.html pay button to use tempCart array for temporary cart storage
+- [x] Update studentlogin.html to merge tempCart into cart after login
+- [x] Modify course-demo.html to redirect to studentdashboard.html after adding to cart if logged in
+- [x] Test the flow: click pay on course-demo without login, login, verify cart in dashboard

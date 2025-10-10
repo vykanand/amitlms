@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .login-container {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 300px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+    }
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 0.7rem;
+      background-color: #007bff;
+      border: none;
+      color: white;
+      font-size: 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .error {
+      color: red;
+      margin-bottom: 1rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h2>Student Login</h2>
+    <div class="error" id="error-msg">Invalid phone or password</div>
+    <form id="login-form">
+      <label for="phone">Phone Number</label>
+      <input type="text" id="phone" name="phone" required />
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required />
+      <button type="submit">Login</button>
+    </form>
+    <p style="text-align: center; margin-top: 1rem;">Don't have an account? <a href="newstudent.html">Sign up</a></p>
+  </div>
+
+  <script>
+    const form = document.getElementById('login-form');
+    const errorMsg = document.getElementById('error-msg');
+
+    form.addEventListener('submit', async function(event) {
+      event.preventDefault();
+      const phone = form.phone.value.trim();
+      const password = form.password.value.trim();
+
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, password })
+        });
+        const data = await response.json();
+        if (response.ok) {
+          // Successful login, store user and redirect
+          localStorage.setItem('user', JSON.stringify(data));
+          // Check for temporary cart
+          const tempCart = JSON.parse(localStorage.getItem('tempCart') || '[]');
+          if (tempCart.length > 0) {
+            let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+            tempCart.forEach(courseId => {
+              if (!cart.includes(courseId)) {
+                cart.push(courseId);
+              }
+            });
+            localStorage.setItem('cart', JSON.stringify(cart));
+            localStorage.removeItem('tempCart');
+          }
+          window.location.href = 'studentdashboard.html';
+        } else {
+          // Show error message
+          errorMsg.textContent = data.error || 'Login failed';
+          errorMsg.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        errorMsg.textContent = 'Network error';
+        errorMsg.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
