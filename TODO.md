@@ -1,13 +1,16 @@
-- [x] Add table creation for 'courses' in server.js
-- [x] Fix GET /api/courses to select 'id' column
-- [x] Add GET /api/courses/:id route
-- [x] Update editCourse in manage-course.html to fetch specific course
-- [x] Update coursevids to JSON array for multiple Google Drive links
-- [x] Update backend to handle coursevids as array
-- [x] Update frontend form to dynamically add/remove video links
-- [x] Test the functionality
+# TODO: Implement YouTube Metadata Extraction and Preview in LMS
 
-# TODO for Making App Vercel Deployable
+## Tasks
 
-- [x] Create vercel.json configuration file
-- [x] Modify server.js: Export the Express app instead of listening on a port
+- [x] Modify public/dashboard.html to support YouTube video previews and metadata extraction
+- [x] Update public/course.html to display videos using metadata objects instead of strings
+- [x] Document the new video metadata format in README.md
+- [x] Implementation complete - testing requires server startup and browser interaction
+
+## Details
+
+- In dashboard.html, add a preview section that appears when pasting YouTube URLs
+- Use YouTube oEmbed API to fetch title, author, thumbnail, and other metadata
+- Store videos as array of objects: {url, title, author, thumbnail, duration, ...}
+- Update course.html to use real metadata for display
+- Ensure backward compatibility if existing courses have string arrays

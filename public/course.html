@@ -209,6 +209,18 @@
       return 'https://placehold.co/140x78?text=Video';
     }
 
+    // Function to format duration with text
+    function formatDurationWithText(duration) {
+      if (duration === 'N/A') return 'N/A';
+      const parts = duration.split(':');
+      if (parts.length === 2) {
+        return duration + ' minutes';
+      } else if (parts.length === 3) {
+        return duration + ' hours';
+      }
+      return duration;
+    }
+
     const courseId = getUrlParameter('id');
     if (!courseId) {
       document.getElementById('course-title').textContent = 'Course not found';
@@ -234,13 +246,26 @@
           const demoIframe = document.getElementById('demo-iframe');
 
           if (course.coursevids && course.coursevids.length > 0) {
-            // Handle array of strings (URLs)
-            const videos = course.coursevids.map((url, index) => {
-              const title = `Video ${index + 1}`;
-              const embedUrl = getEmbedUrl(url);
-              const thumbnail = getThumbnail(url);
-              const duration = 'N/A';
-              return { title, url: embedUrl, thumbnail, duration };
+            // Handle array of strings (URLs) or objects (metadata)
+            const videos = course.coursevids.map((video, index) => {
+              if (typeof video === 'string') {
+                // Backward compatibility: video is a URL string
+                const title = `Video ${index + 1}`;
+                const embedUrl = getEmbedUrl(video);
+                const thumbnail = getThumbnail(video);
+                const duration = 'N/A';
+                return { title, url: embedUrl, thumbnail, duration, originalUrl: video };
+              } else {
+                // New format: video is an object with metadata
+                return {
+                  title: video.title || `Video ${index + 1}`,
+                  url: video.url,
+                  thumbnail: video.thumbnail || getThumbnail(video.url),
+                  duration: video.duration || 'N/A',
+                  author: video.author,
+                  originalUrl: video.url
+                };
+              }
             });
 
             // Set demo video to first video if not Drive
@@ -250,14 +275,14 @@
 
             // Render video list
             videoList.innerHTML = videos.map(video => `
-              <li class="video-item" data-url="${video.url}">
+              <li class="video-item" data-url="${video.url}" data-original="${video.originalUrl}">
                 <div class="video-thumbnail">
                   <img src="${video.thumbnail}" alt="${video.title} Thumbnail" />
                   <div class="play-button">▶</div>
                 </div>
                 <div class="video-info">
                   <div class="video-title">${video.title}</div>
-                  <div class="video-length">${video.duration}</div>
+                  <div class="video-length">${formatDurationWithText(video.duration)}${video.author ? ' • ' + video.author : ''}</div>
                 </div>
               </li>
             `).join('');
@@ -266,8 +291,9 @@
             document.querySelectorAll('.video-item').forEach(item => {
               item.addEventListener('click', () => {
                 const url = item.getAttribute('data-url');
-                if (url.includes('drive.google.com')) {
-                  window.open(url, '_blank');
+                const originalUrl = item.getAttribute('data-original');
+                if (originalUrl.includes('drive.google.com')) {
+                  window.open(originalUrl, '_blank');
                 } else {
                   demoIframe.src = url;
                 }

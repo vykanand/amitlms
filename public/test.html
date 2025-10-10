@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>YouTube Link Metadata Preview</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            font-size: 16px;
+        }
+
+        #preview {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        img {
+            max-width: 100%;
+            max-height: 200px;
+            display: block;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Paste YouTube URL below</h2>
+    <input type="text" id="youtubeUrl" placeholder="Paste YouTube link here" />
+
+    <div id="preview" style="display:none;">
+        <h3 id="title"></h3>
+        <p><strong>Author:</strong> <span id="author"></span></p>
+        <p><strong>Duration:</strong> <span id="duration"></span> seconds</p>
+        <img id="thumbnail" alt="Video thumbnail" />
+        <div id="player"></div>
+    </div>
+
+    <script>
+        const input = document.getElementById('youtubeUrl');
+        const preview = document.getElementById('preview');
+        const titleEl = document.getElementById('title');
+        const authorEl = document.getElementById('author');
+        const durationEl = document.getElementById('duration');
+        const thumbnailEl = document.getElementById('thumbnail');
+        const playerDiv = document.getElementById('player');
+
+        let player;
+
+        // Load YouTube IFrame API
+        let tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        document.head.appendChild(tag);
+
+        function extractVideoID(url) {
+            // Regex to extract video ID from many YouTube URL formats
+            const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|embed|shorts)\/|.*[?&]v=)|youtu\.be\/)([^&?\/]{11})/;
+            const match = url.match(regExp);
+            return (match && match[1]) || null;
+        }
+
+        function resetPreview() {
+            preview.style.display = 'none';
+            titleEl.textContent = '';
+            authorEl.textContent = '';
+            durationEl.textContent = '';
+            thumbnailEl.src = '';
+            thumbnailEl.alt = '';
+            playerDiv.innerHTML = '';
+            if (player) {
+                player.destroy();
+                player = null;
+            }
+        }
+
+        input.addEventListener('input', () => {
+            const url = input.value.trim();
+            if (!url) {
+                resetPreview();
+                return;
+            }
+
+            const videoId = extractVideoID(url);
+            if (!videoId) {
+                resetPreview();
+                return;
+            }
+
+            // Show preview container
+            preview.style.display = 'block';
+
+            // Fetch oEmbed metadata
+            fetch(`https://www.youtube.com/oembed?url=https://youtu.be/${videoId}&format=json`)
+                .then(res => res.json())
+                .then(data => {
+                    titleEl.textContent = data.title;
+                    authorEl.textContent = data.author_name;
+                    thumbnailEl.src = data.thumbnail_url;
+                    thumbnailEl.alt = data.title;
+
+                    // Load or reload YouTube player
+                    if (player) {
+                        player.loadVideoById(videoId);
+                    } else {
+                        player = new YT.Player('player', {
+                            height: '200',
+                            width: '320',
+                            videoId: videoId,
+                            events: {
+                                'onReady': onPlayerReady
+                            },
+                            playerVars: {
+                                modestbranding: 1,
+                                controls: 1,
+                                rel: 0
+                            }
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.error('Error fetching oEmbed:', err);
+                    resetPreview();
+                });
+        });
+
+        function onPlayerReady(event) {
+            // Get duration and show it
+            const duration = player.getDuration();
+            durationEl.textContent = duration.toFixed(2);
+        }
+
+    </script>
+
+</body>
+
+</html>

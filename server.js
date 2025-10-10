@@ -203,4 +203,10 @@ app.get("*", (req, res) => {
   res.status(404).send("Website not found!");
 });
 
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`Server is running at http://localhost:${port}`);
+  });
+}
+
 module.exports = app;
