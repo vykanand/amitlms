@@ -95,6 +95,32 @@ app.get('/', (req, res) => {
 // Middleware to parse JSON
 app.use(express.json());
 
+// Database handshake endpoint to wake up serverless database
+app.get('/api/handshake', (req, res) => {
+  console.log('Database handshake initiated...');
+  
+  // Simple ping query to wake up the database
+  const pingQuery = 'SELECT 1 as ping';
+  
+  db.query(pingQuery, (err, results) => {
+    if (err) {
+      console.error('Database handshake failed:', err);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Database handshake failed',
+        message: 'Unable to connect to database. Please try again.'
+      });
+    } else {
+      console.log('Database handshake successful');
+      res.json({ 
+        success: true, 
+        message: 'Database is ready',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+});
+
 // API endpoint to get courses
 app.get('/api/courses', (req, res) => {
   const query = 'SELECT id, coursename, coursepic, coursedesc, duration, coursevids, price FROM courses';
