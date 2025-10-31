@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Student Signup</title>
+  <script src="js/loading-overlay.js"></script>
+  <script src="js/db-handshake.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -42,9 +44,9 @@
     button {
       width: 100%;
       padding: 0.7rem;
-      background-color: #28a745;
+      background-color: #1e7e34;
       border: none;
-      color: white;
+      color: #ffffff;
       font-size: 1rem;
       border-radius: 4px;
       cursor: pointer;
@@ -93,25 +95,51 @@
       successMsg.style.display = 'none';
 
       try {
-        const response = await fetch('/api/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone, password })
-        });
-        const data = await response.json();
-        if (response.ok) {
-          successMsg.textContent = 'Signup successful! Redirecting to login...';
-          successMsg.style.display = 'block';
-          setTimeout(() => {
-            window.location.href = 'studentlogin.html';
-          }, 2000);
-        } else {
-          errorMsg.textContent = data.error || 'Signup failed';
-          errorMsg.style.display = 'block';
-        }
+        // Use LoadingOverlay for the entire signup process
+        await LoadingOverlay.showForFormSubmission(
+          async (overlay) => {
+            // First perform database handshake
+            overlay.updateMessage('Please wait...');
+            await initializeDatabaseHandshake({
+              retryAttempts: 2,
+              retryDelay: 2000,
+              showOverlay: false, // Don't show separate overlay
+              onError: (error) => {
+                console.error('Database handshake failed during signup:', error);
+                throw new Error('Unable to connect');
+              }
+            });
+
+            // Now perform signup
+            overlay.updateMessage('Creating account...');
+            const response = await fetch('/api/signup', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ phone, password })
+            });
+            
+            const data = await response.json();
+            if (!response.ok) {
+              throw new Error(data.error || 'Signup failed');
+            }
+
+            // Success - show success message and redirect
+            overlay.updateMessage('Account created successfully! Redirecting...');
+            successMsg.textContent = 'Signup successful! Redirecting to login...';
+            successMsg.style.display = 'block';
+            
+            setTimeout(() => {
+              globalThis.location.href = 'studentlogin.html';
+            }, 2000);
+          },
+          {
+            title: 'Creating Account...',
+            successMessage: 'Account created successfully!'
+          }
+        );
       } catch (error) {
         console.error('Signup error:', error);
-        errorMsg.textContent = 'Network error';
+        errorMsg.textContent = error.message || 'Signup failed. Please try again.';
         errorMsg.style.display = 'block';
       }
     });

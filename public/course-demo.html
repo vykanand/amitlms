@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Course Preview</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="js/loading-overlay.js"></script>
+  <script src="js/db-handshake.js"></script>
   <style>
     body {
       background: #f5f7fa;
@@ -64,8 +66,8 @@
       color: #4a5568;
     }
     .pay-button {
-      background: linear-gradient(90deg, #3182ce, #d53f8c);
-      color: white;
+      background: linear-gradient(90deg, #2c5aa0, #b83280);
+      color: #ffffff;
       padding: 0.75rem 1.5rem;
       border-radius: 8px;
       font-weight: 600;
@@ -251,7 +253,7 @@
 <body>
   <div class="container">
     <section class="course-header">
-      <img id="course-photo" src="https://via.placeholder.com/240x140.png?text=Course+Photo" alt="Course Photo" class="course-photo" />
+      <img id="course-photo" src="https://via.placeholder.com/240x140.png?text=Course+Photo" alt="Course Thumbnail" class="course-photo" />
       <div class="course-details">
         <h1 id="course-title" class="course-title">Loading...</h1>
         <p id="course-description" class="course-description">
@@ -284,17 +286,17 @@
   <script>
     // Function to get URL parameter
     function getUrlParameter(name) {
-      name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-      const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+      name = name.replace(/\[/, String.raw`\[`).replace(/\]/, String.raw`\]`);
+      const regex = new RegExp(String.raw`[?&]` + name + '=([^&#]*)');
       const results = regex.exec(location.search);
-      return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+      return results === null ? '' : decodeURIComponent(results[1].replaceAll('+', ' '));
     }
 
     // Function to convert YouTube URL to embeddable format
     function getEmbedUrl(url) {
       const videoId = extractVideoID(url);
       if (videoId) {
-        return `https://www.youtube.com/embed/${videoId}`;
+        return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&iv_load_policy=3&showinfo=0`;
       }
       // Handle Google Drive
       if (url.includes('drive.google.com')) {
@@ -319,9 +321,35 @@
 
     // Function to extract the video ID from a YouTube URL
     function extractVideoID(url) {
-      const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|embed|shorts)\/|.*[?&]v=)|youtu\.be\/)([^&?\/]{11})|videoplayback.*id=([^&]+)/;
-      const match = url.match(regExp);
-      return (match && (match[1] || match[2])) || null;
+      // Safety check for invalid URLs
+      if (!url || typeof url !== 'string' || url.length > 500) {
+        console.warn('Invalid or too long URL:', url?.substring(0, 100) + '...');
+        return null;
+      }
+      
+      let videoId = null;
+      
+      // YouTube URL parsing with proper regex patterns
+      if (url.includes('/embed/')) {
+        const match = url.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
+        videoId = match ? match[1] : null;
+      } else if (url.includes('youtube.com')) {
+        const match = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+        videoId = match ? match[1] : null;
+      } else if (url.includes('youtu.be')) {
+        const match = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+        videoId = match ? match[1] : null;
+      } else if (url.includes('videoplayback')) {
+        const match = url.match(/id=([^&]+)/);
+        videoId = match ? match[1] : null;
+      }
+      
+      // Validate extracted video ID (should be exactly 11 characters for YouTube)
+      if (videoId && videoId.length === 11 && /^[a-zA-Z0-9_-]+$/.test(videoId)) {
+        return videoId;
+      }
+      
+      return null;
     }
 
     // Function to format duration with text
@@ -336,120 +364,181 @@
       return duration;
     }
 
-    const courseId = getUrlParameter('id');
-    if (!courseId) {
-      document.getElementById('course-title').textContent = 'Course not found';
-      document.getElementById('course-description').textContent = 'Invalid course ID.';
-    } else {
-      fetch(`/api/courses/${courseId}`)
-        .then(response => response.json())
-        .then(course => {
-          console.log('Course data:', course);
-          if (course.error) {
-            document.getElementById('course-title').textContent = 'Course not found';
-            document.getElementById('course-description').textContent = course.error;
-            return;
-          }
-
-          // Populate course header
-          document.getElementById('course-photo').src = course.coursepic || 'https://via.placeholder.com/240x140.png?text=Course+Photo';
-          document.getElementById('course-title').textContent = course.coursename;
-          document.getElementById('course-description').textContent = course.coursedesc;
-          document.getElementById('course-price').textContent = `₹${course.price || 'N/A'}`;
-
-          // Populate videos
-          const videoList = document.getElementById('video-list');
-          const demoPlayer = document.getElementById('demo-player');
-          const demoThumbnail = document.getElementById('demo-thumbnail');
-          const demoPlayButton = document.getElementById('demo-play-button');
-          const demoIframe = document.getElementById('demo-iframe');
-
-          if (course.coursevids && course.coursevids.length > 0) {
-            // Handle array of strings (URLs) or objects (metadata)
-            const videos = course.coursevids.map((video, index) => {
-              if (typeof video === 'string') {
-                // Backward compatibility: video is a URL string
-                const title = `Video ${index + 1}`;
-                const embedUrl = getEmbedUrl(video);
-                const thumbnail = getThumbnail(video);
-                const duration = 'N/A';
-                return { title, url: embedUrl, thumbnail, duration, originalUrl: video };
-              } else {
-                // New format: video is an object with metadata
-                return {
-                  title: video.title || `Video ${index + 1}`,
-                  url: video.url,
-                  thumbnail: video.thumbnail || getThumbnail(video.url),
-                  duration: video.duration || 'N/A',
-                  author: video.author,
-                  originalUrl: video.url
-                };
-              }
-            });
-
-            // Set demo video thumbnail to first video if not Drive
-            if (videos.length > 0 && !videos[0].url.includes('drive.google.com')) {
-              demoThumbnail.src = videos[0].thumbnail || course.coursepic || 'https://via.placeholder.com/400x225.png?text=Demo+Video';
-              demoPlayer.style.display = 'block';
-              demoIframe.style.display = 'none';
-              demoIframe.src = videos[0].url;
-
-              // Add click handler to play button
-              demoPlayButton.onclick = () => {
-                demoPlayer.style.display = 'none';
-                demoIframe.style.display = 'block';
-              };
-            } else {
-              demoPlayer.style.display = 'none';
-            }
-
-            // Render video list: first video playable, rest locked
-            videoList.innerHTML = videos.map((video, index) => `
-              <li class="video-item ${index > 0 ? 'locked' : ''}" data-url="${video.url}" data-original="${video.originalUrl}" data-index="${index}">
-                <div class="video-thumbnail">
-                  <img src="${video.thumbnail}" alt="${video.title} Thumbnail" />
-                  <div class="play-button">${index > 0 ? '' : '▶'}</div>
-                </div>
-                <div class="video-info">
-                  <div class="video-title">${video.title}</div>
-                  <div class="video-length">${formatDurationWithText(video.duration)}${video.author ? ' • ' + video.author : ''}</div>
-                </div>
-              </li>
-            `).join('');
-
-            // Add click handlers: first video plays in demo, rest are locked
-            document.querySelectorAll('.video-item').forEach(item => {
-              const index = parseInt(item.getAttribute('data-index'));
-              if (index === 0) {
-                item.addEventListener('click', () => {
-                  const url = item.getAttribute('data-url');
-                  const originalUrl = item.getAttribute('data-original');
-                  if (originalUrl.includes('drive.google.com')) {
-                    window.open(originalUrl, '_blank');
-                  } else {
-                    demoPlayer.style.display = 'none';
-                    demoIframe.style.display = 'block';
-                    let embedUrl = url;
-                    if (url.includes('youtube.com/embed/')) {
-                      embedUrl += (url.includes('?') ? '&' : '?') + 'autoplay=1';
-                    }
-                    demoIframe.src = embedUrl;
-                  }
-                });
-              }
-              // Rest are locked, no handlers
-            });
-          } else {
-            videoList.innerHTML = '<li>No videos available for this course.</li>';
-            demoPlayer.style.display = 'none';
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching course:', error);
-          document.getElementById('course-title').textContent = 'Error loading course';
-          document.getElementById('course-description').textContent = 'Unable to load course details.';
-        });
+    // Function to load course data
+    // Helper function to populate course header information
+    function populateCourseHeader(course) {
+      document.getElementById('course-photo').src = course.coursepic || 'https://via.placeholder.com/240x140.png?text=Course+Photo';
+      document.getElementById('course-title').textContent = course.coursename;
+      document.getElementById('course-description').textContent = course.coursedesc;
+      document.getElementById('course-price').textContent = `₹${course.price || 'N/A'}`;
     }
+
+    // Helper function to process video data
+    function processVideos(coursevids) {
+      return coursevids.map((video, index) => {
+        if (typeof video === 'string') {
+          return {
+            title: `Video ${index + 1}`,
+            url: getEmbedUrl(video),
+            thumbnail: getThumbnail(video),
+            duration: 'N/A',
+            originalUrl: video
+          };
+        }
+        return {
+          title: video.title || `Video ${index + 1}`,
+          url: video.url,
+          thumbnail: video.thumbnail || getThumbnail(video.url),
+          duration: video.duration || 'N/A',
+          author: video.author,
+          originalUrl: video.url
+        };
+      });
+    }
+
+    // Helper function to setup demo player
+    function setupDemoPlayer(videos, course) {
+      const demoPlayer = document.getElementById('demo-player');
+      const demoThumbnail = document.getElementById('demo-thumbnail');
+      const demoPlayButton = document.getElementById('demo-play-button');
+      const demoIframe = document.getElementById('demo-iframe');
+
+      if (videos.length > 0 && !videos[0].url.includes('drive.google.com')) {
+        demoThumbnail.src = videos[0].thumbnail || course.coursepic || 'https://via.placeholder.com/400x225.png?text=Demo+Video';
+        demoPlayer.style.display = 'block';
+        demoIframe.style.display = 'none';
+        demoIframe.src = videos[0].url;
+
+        demoPlayButton.onclick = () => {
+          demoPlayer.style.display = 'none';
+          demoIframe.style.display = 'block';
+        };
+      } else {
+        demoPlayer.style.display = 'none';
+      }
+    }
+
+    // Helper function to render video list
+    function renderVideoList(videos) {
+      const videoList = document.getElementById('video-list');
+      const videoListHTML = [];
+      
+      for (let index = 0; index < videos.length; index++) {
+        const video = videos[index];
+        videoListHTML.push(`
+          <li class="video-item ${index > 0 ? 'locked' : ''}" data-url="${video.url}" data-original="${video.originalUrl}" data-index="${index}">
+            <div class="video-thumbnail">
+              <img src="${video.thumbnail}" alt="${video.title} Thumbnail" />
+              <div class="play-button">${index > 0 ? '' : '▶'}</div>
+            </div>
+            <div class="video-info">
+              <div class="video-title">${video.title}</div>
+              <div class="video-length">${formatDurationWithText(video.duration)}${video.author ? ' • ' + video.author : ''}</div>
+            </div>
+          </li>
+        `);
+      }
+      videoList.innerHTML = videoListHTML.join('');
+    }
+
+    // Helper function to load a video in the demo player
+    function loadVideo(url, originalUrl) {
+      const demoPlayer = document.getElementById('demo-player');
+      const demoIframe = document.getElementById('demo-iframe');
+      
+      if (originalUrl.includes('drive.google.com')) {
+        window.open(originalUrl, '_blank');
+      } else {
+        demoPlayer.style.display = 'none';
+        demoIframe.style.display = 'block';
+        let embedUrl = url;
+        if (url.includes('youtube.com/embed/')) {
+          embedUrl += (url.includes('?') ? '&' : '?') + 'autoplay=1';
+        }
+        demoIframe.src = embedUrl;
+      }
+    }
+
+    // Helper function to add video event handlers
+    function addVideoEventHandlers() {
+      for (const item of document.querySelectorAll('.video-item')) {
+        const index = Number.parseInt(item.dataset.index, 10);
+        if (index === 0) {
+          item.addEventListener('click', () => {
+            const url = item.dataset.url;
+            const originalUrl = item.dataset.original;
+            loadVideo(url, originalUrl);
+          });
+        }
+      }
+    }
+
+    // Main function simplified
+    async function loadCourseData() {
+      const courseId = getUrlParameter('id');
+      if (!courseId) {
+        document.getElementById('course-title').textContent = 'Course not found';
+        document.getElementById('course-description').textContent = 'Invalid course ID.';
+        return;
+      }
+
+      try {
+        // Use session-aware API call - no loading overlay since handshake covers it
+        const response = await addSessionToRequest(`/api/courses/${courseId}`);
+        const course = await response.json();
+
+        if (course.error) {
+          document.getElementById('course-title').textContent = 'Course not found';
+          document.getElementById('course-description').textContent = course.error;
+          return;
+        }
+
+        populateCourseHeader(course);
+
+        if (course.coursevids && course.coursevids.length > 0) {
+          const videos = processVideos(course.coursevids);
+          setupDemoPlayer(videos, course);
+          renderVideoList(videos);
+          addVideoEventHandlers();
+        } else {
+          document.getElementById('video-list').innerHTML = '<li>No videos available for this course.</li>';
+          document.getElementById('demo-player').style.display = 'none';
+        }
+      } catch (error) {
+        console.error('Error fetching course:', error);
+        document.getElementById('course-title').textContent = 'Error loading course';
+        document.getElementById('course-description').textContent = 'Unable to load course details.';
+      }
+    }
+
+    // Initialize database handshake and load content when ready
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // Start database handshake
+        await initializeDatabaseHandshake({
+          retryAttempts: 3,
+          retryDelay: 3000,
+          overlayOptions: {
+            title: 'Loading Course...',
+            message: 'Please wait...',
+            size: 'small',
+            theme: 'default'
+          },
+          onReady: () => {
+            loadCourseData();
+          },
+          onError: (error) => {
+            console.error('Database handshake failed:', error);
+            document.getElementById('course-title').textContent = 'Unable to Load';
+            document.getElementById('course-description').textContent = 'Please refresh the page to try again.';
+          }
+        });
+      } catch (error) {
+        console.error('Failed to initialize database handshake:', error);
+        // Fallback to load without handshake
+        loadCourseData();
+      }
+    });
 
     // Scroll behavior for header
     let prevScrollY = window.scrollY;
@@ -475,7 +564,7 @@
           localStorage.setItem('cart', JSON.stringify(cart));
         }
         // Redirect to student dashboard
-        window.location.href = 'studentdashboard.html';
+        globalThis.location.href = 'studentdashboard.html';
       } else {
         // Redirect to login, store in temporary cart
         let tempCart = JSON.parse(localStorage.getItem('tempCart') || '[]');
@@ -483,7 +572,7 @@
           tempCart.push(courseId);
           localStorage.setItem('tempCart', JSON.stringify(tempCart));
         }
-        window.location.href = 'studentlogin.html';
+        globalThis.location.href = 'studentlogin.html';
       }
     });
   </script>

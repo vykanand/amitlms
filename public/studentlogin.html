@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Student Login</title>
+  <script src="js/loading-overlay.js"></script>
+  <script src="js/db-handshake.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -42,9 +44,9 @@
     button {
       width: 100%;
       padding: 0.7rem;
-      background-color: #007bff;
+      background-color: #0056b3;
       border: none;
-      color: white;
+      color: #ffffff;
       font-size: 1rem;
       border-radius: 4px;
       cursor: pointer;
@@ -81,38 +83,68 @@
       event.preventDefault();
       const phone = form.phone.value.trim();
       const password = form.password.value.trim();
+      
+      errorMsg.style.display = 'none';
 
       try {
-        const response = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone, password })
-        });
-        const data = await response.json();
-        if (response.ok) {
-          // Successful login, store user and redirect
-          localStorage.setItem('user', JSON.stringify(data));
-          // Check for temporary cart
-          const tempCart = JSON.parse(localStorage.getItem('tempCart') || '[]');
-          if (tempCart.length > 0) {
-            let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-            tempCart.forEach(courseId => {
-              if (!cart.includes(courseId)) {
-                cart.push(courseId);
+        // Use LoadingOverlay for the entire login process
+        await LoadingOverlay.showForFormSubmission(
+          async (overlay) => {
+            // First perform database handshake
+            overlay.updateMessage('Please wait...');
+            await initializeDatabaseHandshake({
+              retryAttempts: 2,
+              retryDelay: 2000,
+              showOverlay: false, // Don't show separate overlay
+              onError: (error) => {
+                console.error('Database handshake failed during login:', error);
+                throw new Error('Unable to connect');
               }
             });
-            localStorage.setItem('cart', JSON.stringify(cart));
-            localStorage.removeItem('tempCart');
+
+            // Now perform login
+            overlay.updateMessage('Logging you in...');
+            const response = await fetch('/api/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ phone, password })
+            });
+            
+            const data = await response.json();
+            if (!response.ok) {
+              throw new Error(data.error || 'Login failed');
+            }
+
+            // Successful login, store user and handle cart
+            overlay.updateMessage('Setting up your session...');
+            localStorage.setItem('user', JSON.stringify(data));
+            
+            // Check for temporary cart
+            const tempCart = JSON.parse(localStorage.getItem('tempCart') || '[]');
+            if (tempCart.length > 0) {
+              let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+              for (const courseId of tempCart) {
+                if (!cart.includes(courseId)) {
+                  cart.push(courseId);
+                }
+              }
+              localStorage.setItem('cart', JSON.stringify(cart));
+              localStorage.removeItem('tempCart');
+            }
+
+            // Redirect to dashboard
+            setTimeout(() => {
+              globalThis.location.href = 'studentdashboard.html';
+            }, 500);
+          },
+          {
+            title: 'Logging In...',
+            successMessage: 'Login successful! Redirecting...'
           }
-          window.location.href = 'studentdashboard.html';
-        } else {
-          // Show error message
-          errorMsg.textContent = data.error || 'Login failed';
-          errorMsg.style.display = 'block';
-        }
+        );
       } catch (error) {
         console.error('Login error:', error);
-        errorMsg.textContent = 'Network error';
+        errorMsg.textContent = error.message || 'Login failed. Please try again.';
         errorMsg.style.display = 'block';
       }
     });

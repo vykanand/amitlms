@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Student Dashboard</title>
+  <script src="js/loading-overlay.js"></script>
+  <script src="js/db-handshake.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -87,7 +89,7 @@
     // Check if user is logged in
     const user = JSON.parse(localStorage.getItem('user'));
     if (!user) {
-      window.location.href = 'studentlogin.html';
+      globalThis.location.href = 'studentlogin.html';
     }
 
     // Display user phone
@@ -98,7 +100,7 @@
       const container = document.getElementById('courses-container');
 
       try {
-        const response = await fetch('/api/user/courses?phone=' + encodeURIComponent(user.phone));
+        const response = await addSessionToRequest('/api/user/courses?phone=' + encodeURIComponent(user.phone));
         const userCourses = await response.json();
 
         if (!userCourses || userCourses.length === 0) {
@@ -127,7 +129,7 @@
 
     function logout() {
       localStorage.removeItem('user');
-      window.location.href = 'studentlogin.html';
+      globalThis.location.href = 'studentlogin.html';
     }
 
     // Load cart
@@ -140,7 +142,7 @@
       }
 
       try {
-        const response = await fetch('/api/courses');
+        const response = await addSessionToRequest('/api/courses');
         const allCourses = await response.json();
         const cartCourses = allCourses.filter(course => cart.includes(course.id.toString()) && !user.courses.includes(course.id));
 
@@ -161,7 +163,7 @@
           </div>
         `).join('');
 
-        const total = cartCourses.reduce((sum, course) => sum + parseInt(course.price), 0);
+        const total = cartCourses.reduce((sum, course) => sum + Number.parseInt(course.price, 10), 0);
 
         container.innerHTML = `
           ${coursesHtml}
@@ -178,7 +180,7 @@
 
     function payForCart(total) {
       const orderId = 'cart-' + user.phone + '-' + Date.now();
-      window.location.href = `pay.html?amount=${total}&orderId=${orderId}`;
+      globalThis.location.href = `pay.html?amount=${total}&orderId=${orderId}`;
     }
 
     // Load all courses
@@ -186,7 +188,7 @@
       const container = document.getElementById('all-courses-container');
 
       try {
-        const response = await fetch('/api/courses');
+        const response = await addSessionToRequest('/api/courses');
         const allCourses = await response.json();
         const availableCourses = allCourses.filter(course => !user.courses.includes(course.id));
 
@@ -223,10 +225,38 @@
       }
     }
 
-    // Load courses and cart on page load
-    loadCourses();
-    loadCart();
-    loadAllCourses();
+    // Initialize database handshake and load content when ready
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // Start database handshake
+        await initializeDatabaseHandshake({
+          retryAttempts: 3,
+          retryDelay: 3000,
+          overlayOptions: {
+            title: 'Loading Dashboard...',
+            message: 'Please wait...',
+            size: 'medium',
+            theme: 'default'
+          },
+          onReady: () => {
+            loadCourses();
+            loadCart();
+            loadAllCourses();
+          },
+          onError: (error) => {
+            console.error('Database handshake failed:', error);
+            document.getElementById('courses-container').innerHTML = 
+              '<p class="no-courses">Unable to load dashboard. Please refresh the page to try again.</p>';
+          }
+        });
+      } catch (error) {
+        console.error('Failed to initialize database handshake:', error);
+        // Fallback to load without handshake
+        loadCourses();
+        loadCart();
+        loadAllCourses();
+      }
+    });
   </script>
 </body>
 </html>

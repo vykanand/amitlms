@@ -1,9 +1,16 @@
 const express = require("express");
-const path = require("path");
-const fs = require("fs");
+const path = require("node:path");
+const fs = require("node:fs");
 const mysql = require("mysql2");
 const app = express();
 const port = 3002;
+
+// Session and activity tracking
+let activeSessions = new Set();
+let lastActivity = Date.now();
+let keepAliveInterval = null;
+const ACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes of inactivity before letting DB sleep
+const KEEP_ALIVE_INTERVAL = 2 * 60 * 1000; // Keep alive ping every 2 minutes
 
 // Database connection
 const db = mysql.createConnection({
@@ -63,18 +70,92 @@ db.connect((err) => {
 // Define the base public directory
 const publicDir = path.join(__dirname, "public");
 
+// Helper function to parse coursevids safely
+function parseCoursevids(coursevidString) {
+  try {
+    return JSON.parse(coursevidString || '[]');
+  } catch (parseError) {
+    console.warn('Error parsing coursevids JSON:', parseError.message);
+    if (typeof coursevidString === 'string') {
+      return coursevidString.split(',').map(v => v.trim());
+    }
+    return [];
+  }
+}
+
+// Session and activity management functions
+function generateSessionId() {
+  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
+function registerActivity(sessionId) {
+  activeSessions.add(sessionId);
+  lastActivity = Date.now();
+  
+  // Start keep-alive mechanism if we have active sessions and it's not already running
+  if (activeSessions.size > 0 && !keepAliveInterval) {
+    startKeepAlive();
+  }
+}
+
+function removeSession(sessionId) {
+  activeSessions.delete(sessionId);
+  
+  // If no active sessions, stop keep-alive after timeout
+  if (activeSessions.size === 0) {
+    setTimeout(() => {
+      if (activeSessions.size === 0 && Date.now() - lastActivity > ACTIVITY_TIMEOUT) {
+        stopKeepAlive();
+      }
+    }, ACTIVITY_TIMEOUT);
+  }
+}
+
+function startKeepAlive() {
+  if (keepAliveInterval) return; // Already running
+  
+  console.log('Starting database keep-alive mechanism');
+  keepAliveInterval = setInterval(() => {
+    // Check if we should stop keep-alive due to inactivity
+    const inactiveTime = Date.now() - lastActivity;
+    
+    if (activeSessions.size === 0 && inactiveTime > ACTIVITY_TIMEOUT) {
+      console.log('No active sessions detected, stopping keep-alive to let database sleep');
+      stopKeepAlive();
+      return;
+    }
+    
+    // Send keep-alive ping
+    if (activeSessions.size > 0) {
+      console.log(`Sending keep-alive ping (${activeSessions.size} active sessions)`);
+      db.query('SELECT 1 as keepalive', (err) => {
+        if (err) {
+          console.warn('Keep-alive ping failed:', err.message);
+        }
+      });
+    }
+  }, KEEP_ALIVE_INTERVAL);
+}
+
+function stopKeepAlive() {
+  if (keepAliveInterval) {
+    console.log('Stopping database keep-alive mechanism - database can sleep now');
+    clearInterval(keepAliveInterval);
+    keepAliveInterval = null;
+  }
+}
+
 // Function to recursively list all files and folders
 function listFiles(dir, prefix = '') {
   try {
     const items = fs.readdirSync(dir);
-    items.forEach(item => {
+    for (const item of items) {
       const fullPath = path.join(dir, item);
       const stat = fs.statSync(fullPath);
-      // console.log(prefix + item);
       if (stat.isDirectory()) {
         listFiles(fullPath, prefix + '  ');
       }
-    });
+    }
   } catch (err) {
     console.error(`Error reading directory ${dir}:`, err.message);
   }
@@ -95,9 +176,23 @@ app.get('/', (req, res) => {
 // Middleware to parse JSON
 app.use(express.json());
 
+// Middleware to track API activity and refresh sessions
+app.use('/api', (req, res, next) => {
+  const sessionId = req.headers['x-session-id'] || req.body?.sessionId || req.query?.sessionId;
+  
+  if (sessionId && activeSessions.has(sessionId)) {
+    registerActivity(sessionId);
+  }
+  
+  next();
+});
+
 // Database handshake endpoint to wake up serverless database
 app.get('/api/handshake', (req, res) => {
   console.log('Database handshake initiated...');
+  
+  // Generate session ID for this client
+  const sessionId = generateSessionId();
   
   // Simple ping query to wake up the database
   const pingQuery = 'SELECT 1 as ping';
@@ -112,12 +207,52 @@ app.get('/api/handshake', (req, res) => {
       });
     } else {
       console.log('Database handshake successful');
+      
+      // Register this session as active
+      registerActivity(sessionId);
+      
       res.json({ 
         success: true, 
         message: 'Database is ready',
+        sessionId: sessionId,
         timestamp: new Date().toISOString()
       });
     }
+  });
+});
+
+// Session heartbeat endpoint to keep session alive
+app.post('/api/heartbeat', (req, res) => {
+  const { sessionId } = req.body;
+  
+  if (sessionId && activeSessions.has(sessionId)) {
+    registerActivity(sessionId);
+    res.json({ success: true, message: 'Session refreshed' });
+  } else {
+    res.status(400).json({ success: false, message: 'Invalid session' });
+  }
+});
+
+// Session close endpoint
+app.post('/api/session/close', (req, res) => {
+  const { sessionId } = req.body;
+  
+  if (sessionId) {
+    removeSession(sessionId);
+    console.log(`Session ${sessionId} closed`);
+    res.json({ success: true, message: 'Session closed' });
+  } else {
+    res.status(400).json({ success: false, message: 'No session ID provided' });
+  }
+});
+
+// Server status endpoint (for monitoring)
+app.get('/api/status', (req, res) => {
+  res.json({
+    activeSessions: activeSessions.size,
+    lastActivity: new Date(lastActivity).toISOString(),
+    keepAliveActive: !!keepAliveInterval,
+    uptime: process.uptime()
   });
 });
 
@@ -130,17 +265,7 @@ app.get('/api/courses', (req, res) => {
       res.status(500).json({ error: 'Database error' });
     } else {
       const parsedResults = results.map(course => {
-        let coursevids;
-        try {
-          coursevids = JSON.parse(course.coursevids || '[]');
-        } catch (e) {
-          // If not JSON, assume comma-separated string
-          if (typeof course.coursevids === 'string') {
-            coursevids = course.coursevids.split(',').map(v => v.trim());
-          } else {
-            coursevids = [];
-          }
-        }
+        const coursevids = parseCoursevids(course.coursevids);
         return { ...course, coursevids };
       });
       res.json(parsedResults);
@@ -159,19 +284,8 @@ app.get('/api/courses/:id', (req, res) => {
     } else if (results.length === 0) {
       res.status(404).json({ error: 'Course not found' });
     } else {
-      // console.log('Raw results:', results);
       const course = results[0];
-      // console.log('coursevids from db:', course.coursevids);
-      let coursevids;
-      try {
-        coursevids = JSON.parse(course.coursevids || '[]');
-      } catch (e) {
-        if (typeof course.coursevids === 'string') {
-          coursevids = course.coursevids.split(',').map(v => v.trim());
-        } else {
-          coursevids = [];
-        }
-      }
+      const coursevids = parseCoursevids(course.coursevids);
       res.json({
         ...course,
         coursevids
@@ -254,7 +368,7 @@ app.get('/api/users/:id', (req, res) => {
 
 // API endpoint to add a user
 app.post('/api/users', (req, res) => {
-  const { name, email, role } = req.body;
+  const { email } = req.body;
   const query = 'INSERT INTO users (phone, password, paid, course) VALUES (?, \'\', \'no\', \'[]\')';
   db.query(query, [email], (err, result) => {
     if (err) {
@@ -269,7 +383,7 @@ app.post('/api/users', (req, res) => {
 // API endpoint to update a user
 app.put('/api/users/:id', (req, res) => {
   const { id } = req.params;
-  const { name, email, role } = req.body;
+  const { email } = req.body;
   const query = 'UPDATE users SET phone = ? WHERE id = ?';
   db.query(query, [email, id], (err, result) => {
     if (err) {
@@ -311,7 +425,8 @@ app.post('/api/login', (req, res) => {
       let courses = [];
       try {
         courses = JSON.parse(user.course || '[]');
-      } catch (e) {
+      } catch (parseError) {
+        console.warn('Error parsing courses JSON:', parseError.message);
         courses = [];
       }
       res.json({
@@ -369,7 +484,8 @@ app.get('/api/user/courses', (req, res) => {
     let courseIds = [];
     try {
       courseIds = JSON.parse(results[0].course || '[]');
-    } catch (e) {
+    } catch (parseError) {
+      console.warn('Error parsing course IDs:', parseError.message);
       courseIds = [];
     }
     if (courseIds.length === 0) {
@@ -384,16 +500,7 @@ app.get('/api/user/courses', (req, res) => {
         return res.status(500).json({ error: 'Database error' });
       }
       const parsedCourses = courses.map(course => {
-        let coursevids;
-        try {
-          coursevids = JSON.parse(course.coursevids || '[]');
-        } catch (e) {
-          if (typeof course.coursevids === 'string') {
-            coursevids = course.coursevids.split(',').map(v => v.trim());
-          } else {
-            coursevids = [];
-          }
-        }
+        const coursevids = parseCoursevids(course.coursevids);
         return { ...course, coursevids };
       });
       res.json(parsedCourses);
@@ -420,7 +527,8 @@ app.post('/api/user/courses', (req, res) => {
     let currentCourses = [];
     try {
       currentCourses = JSON.parse(results[0].course || '[]');
-    } catch (e) {
+    } catch (parseError) {
+      console.warn('Error parsing current courses:', parseError.message);
       currentCourses = [];
     }
     // Add new courses if not already present

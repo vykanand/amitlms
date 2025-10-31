@@ -348,6 +348,15 @@
         <div class="subtitle">November 2025 Usage</div>
 
         <table class="usage-table">
+            <thead>
+                <tr>
+                    <th>Usage Type</th>
+                    <th>Amount</th>
+                    <th>Credit Type</th>
+                    <th>Balance</th>
+                </tr>
+            </thead>
+            <tbody>
             <tr>
                 <td class="label">Current Usage</td>
                 <td class="value" id="current-usage">Rs 500</td>
@@ -376,6 +385,7 @@
                 </td>
                 <td class="value"></td>
             </tr>
+            </tbody>
         </table>
 
         <hr>
@@ -390,6 +400,8 @@
         </div>
     </div>
 
+    <script src="js/loading-overlay.js"></script>
+    <script src="js/db-handshake.js"></script>
     <script>
         // Function to update payment button and credits used with current usage value
         function updatePaymentButton() {
@@ -406,7 +418,7 @@
                 creditsUsedElement.textContent = currentUsageValue;
                 
                 // Extract numeric value to check if payment is needed
-                const numericValue = parseFloat(currentUsageValue.replace(/[^\d.]/g, ''));
+                const numericValue = Number.parseFloat(currentUsageValue.replaceAll(/[^\d.]/g, ''));
                 
                 // Add visual indicator if there's an amount to pay
                 if (numericValue > 0) {
@@ -418,12 +430,43 @@
                 }
             }
         }
+
+        // Function to load server usage data (simulated for now)
+        function loadServerUsage() {
+            // In a real application, this would fetch from an API
+            // For now, we'll just update the UI with existing values
+            updatePaymentButton();
+            console.log('Server usage data loaded');
+        }
         
-        // Update on page load
-        document.addEventListener('DOMContentLoaded', updatePaymentButton);
-        
-        // Optional: Update periodically or when usage changes
-        // You can call updatePaymentButton() whenever the usage value changes
+        // Initialize database handshake and load content when ready
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Start database handshake
+                await initializeDatabaseHandshake({
+                    retryAttempts: 3,
+                    retryDelay: 3000,
+                    overlayOptions: {
+                        size: 'small',
+                        theme: 'default',
+                        title: 'Loading Server Status...',
+                        message: 'Please wait...'
+                    },
+                    onReady: () => {
+                        loadServerUsage();
+                    },
+                    onError: (error) => {
+                        console.error('Database handshake failed:', error);
+                        // Still show the UI even if database connection fails
+                        loadServerUsage();
+                    }
+                });
+            } catch (error) {
+                console.error('Failed to initialize database handshake:', error);
+                // Fallback to show UI without database connection
+                loadServerUsage();
+            }
+        });
     </script>
 </body>
 

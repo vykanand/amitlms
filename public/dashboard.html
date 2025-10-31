@@ -6,6 +6,8 @@
   <title>Admin Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="js/loading-overlay.js"></script>
+  <script src="js/db-handshake.js"></script>
   <style>
     body {
       background: #f5f7fa;
@@ -56,10 +58,10 @@
       color: #2d3748;
     }
     .sidebar-link.active {
-      background: #3182ce;
-      color: white;
+      background: #2c5aa0;
+      color: #ffffff;
       font-weight: 700;
-      box-shadow: 0 4px 12px rgba(49, 130, 206, 0.4);
+      box-shadow: 0 4px 12px rgba(44, 90, 160, 0.4);
     }
     .logout-link {
       color: #718096;
@@ -99,8 +101,8 @@
       align-items: center;
     }
     .btn-primary {
-      background: linear-gradient(90deg, #3182ce, #d53f8c);
-      color: white;
+      background: linear-gradient(90deg, #2c5aa0, #b83280);
+      color: #ffffff;
       padding: 0.5rem 1.25rem;
       border-radius: 8px;
       font-weight: 600;
@@ -158,8 +160,8 @@
       margin-right: 0.5rem;
     }
     .remove-video-btn {
-      background: #e53e3e;
-      color: white;
+      background: #c53030;
+      color: #ffffff;
       border: none;
       border-radius: 4px;
       padding: 0.25rem 0.5rem;
@@ -242,7 +244,7 @@
             <input type="number" id="price" step="0.01" required>
           </div>
           <div class="form-group">
-            <label>Course Videos (YouTube/Google Drive Links)</label>
+            <label for="videos-container">Course Videos (YouTube/Google Drive Links)</label>
             <div id="videos-container">
               <!-- Video inputs will be added here -->
             </div>
@@ -311,13 +313,13 @@
 
         // Append styles from the loaded page's head to the document head to maintain styling
         const styles = doc.head.querySelectorAll('style');
-        styles.forEach(style => {
+        for (const style of styles) {
           if (!document.head.querySelector(`style[data-page="${page}"]`)) {
             const clonedStyle = style.cloneNode(true);
-            clonedStyle.setAttribute('data-page', page);
+            clonedStyle.dataset.page = page;
             document.head.appendChild(clonedStyle);
           }
-        });
+        }
 
         // Extract and display the body content
         const bodyContent = doc.body.innerHTML;
@@ -333,13 +335,13 @@
      * @param {string} activePage - The filename of the active page (e.g., 'manage-course.html')
      */
     function setActiveLink(activePage) {
-      sidebarLinks.forEach(link => {
-        if (link.getAttribute('data-page') === activePage) {
+      for (const link of sidebarLinks) {
+        if (link.dataset.page === activePage) {
           link.classList.add('active');
         } else {
           link.classList.remove('active');
         }
-      });
+      }
     }
 
     let editingId = null;
@@ -422,7 +424,7 @@
     function getEmbedUrl(url) {
       const videoId = extractVideoID(url);
       if (videoId) {
-        return `https://www.youtube.com/embed/${videoId}`;
+        return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&iv_load_policy=3&showinfo=0`;
       }
       // Handle Google Drive
       if (url.includes('drive.google.com')) {
@@ -455,9 +457,35 @@
      * @returns {string|null} - The video ID or null if not found
      */
     function extractVideoID(url) {
-      const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|embed|shorts)\/|.*[?&]v=)|youtu\.be\/)([^&?\/]{11})|videoplayback.*id=([^&]+)/;
-      const match = url.match(regExp);
-      return (match && (match[1] || match[2])) || null;
+      // Safety check for invalid URLs
+      if (!url || typeof url !== 'string' || url.length > 500) {
+        console.warn('Invalid or too long URL:', url?.substring(0, 100) + '...');
+        return null;
+      }
+      
+      let videoId = null;
+      
+      // YouTube URL parsing with proper regex patterns
+      if (url.includes('/embed/')) {
+        const match = url.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
+        videoId = match ? match[1] : null;
+      } else if (url.includes('youtube.com')) {
+        const match = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+        videoId = match ? match[1] : null;
+      } else if (url.includes('youtu.be')) {
+        const match = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+        videoId = match ? match[1] : null;
+      } else if (url.includes('videoplayback')) {
+        const match = url.match(/id=([^&]+)/);
+        videoId = match ? match[1] : null;
+      }
+      
+      // Validate extracted video ID (should be exactly 11 characters for YouTube)
+      if (videoId && videoId.length === 11 && /^[a-zA-Z0-9_-]+$/.test(videoId)) {
+        return videoId;
+      }
+      
+      return null;
     }
 
     /**
@@ -484,28 +512,75 @@
      */
     function getYouTubeDuration(videoId) {
       return new Promise((resolve) => {
-        const player = new YT.Player('temp-player', {
-          videoId: videoId,
-          events: {
-            'onReady': (event) => {
-              const duration = event.target.getDuration();
-              event.target.destroy();
-              resolve(formatDuration(duration));
+        // Check if YouTube API is available
+        if (globalThis.YT === undefined || globalThis.YT.Player === undefined) {
+          console.warn('YouTube API not loaded, returning fallback duration');
+          resolve('N/A');
+          return;
+        }
+
+        let player = null;
+        const tempPlayerElement = document.getElementById('temp-player');
+        
+        if (!tempPlayerElement) {
+          console.warn('temp-player element not found, returning fallback duration');
+          resolve('N/A');
+          return;
+        }
+
+        try {
+          player = new YT.Player('temp-player', {
+            videoId: videoId,
+            events: {
+              'onReady': function(event) {
+                try {
+                  const duration = event.target.getDuration();
+                  const formattedDuration = formatDuration(duration);
+                  resolve(formattedDuration);
+                } catch (error) {
+                  console.warn('Error getting video duration:', error);
+                  resolve('N/A');
+                } finally {
+                  // Clean up the player
+                  if (event.target && typeof event.target.destroy === 'function') {
+                    event.target.destroy();
+                  }
+                }
+              },
+              'onError': function(event) {
+                console.warn('YouTube player error:', event.data);
+                resolve('N/A');
+                if (event.target && typeof event.target.destroy === 'function') {
+                  event.target.destroy();
+                }
+              }
+            },
+            playerVars: {
+              autoplay: 0,
+              controls: 0,
+              disablekb: 1,
+              enablejsapi: 1,
+              fs: 0,
+              iv_load_policy: 3,
+              modestbranding: 1,
+              playsinline: 1,
+              rel: 0,
+              showinfo: 0
             }
-          },
-          playerVars: {
-            autoplay: 0,
-            controls: 0,
-            disablekb: 1,
-            enablejsapi: 1,
-            fs: 0,
-            iv_load_policy: 3,
-            modestbranding: 1,
-            playsinline: 1,
-            rel: 0,
-            showinfo: 0
-          }
-        });
+          });
+          
+          // Timeout fallback in case player doesn't load
+          setTimeout(() => {
+            if (player && typeof player.destroy === 'function') {
+              player.destroy();
+            }
+            resolve('N/A');
+          }, 10000); // 10 second timeout
+          
+        } catch (error) {
+          console.warn('Error creating YouTube player:', error);
+          resolve('N/A');
+        }
       });
     }
 
@@ -568,7 +643,7 @@
         preview = document.createElement('div');
         preview.className = 'video-preview';
         const input = inputDiv.querySelector('input');
-        inputDiv.insertBefore(preview, input);
+        input.before(preview);
       }
 
       // Populate preview with metadata information
@@ -655,7 +730,7 @@
           // This handles existing courses or non-YouTube videos (like Google Drive)
           return url;
         }
-      }).filter(v => v); // Remove null values from empty inputs
+      }).filter(Boolean); // Remove null values from empty inputs
     }
 
     /**
@@ -666,7 +741,7 @@
       const container = document.getElementById('videos-container');
       container.innerHTML = ''; // Clear existing inputs
 
-      videos.forEach(video => {
+      for (const video of videos) {
         if (typeof video === 'string') {
           // Handle legacy string URLs (backward compatibility)
           addVideoInput(video);
@@ -674,7 +749,7 @@
           // Handle new metadata objects - extract the URL for the input field
           addVideoInput(video.url);
         }
-      });
+      }
     }
 
     /**
@@ -710,7 +785,7 @@
           coursepic: document.getElementById('coursepic').value,
           coursedesc: document.getElementById('coursedesc').value,
           duration: document.getElementById('duration').value,
-          price: parseFloat(document.getElementById('price').value) || 0,
+          price: Number.parseFloat(document.getElementById('price').value) || 0,
           coursevids: getVideos()
         };
         const method = editingId ? 'PUT' : 'POST';
@@ -841,10 +916,10 @@
       });
     }
 
-    sidebarLinks.forEach(link => {
+    for (const link of sidebarLinks) {
       link.addEventListener('click', (e) => {
         e.preventDefault();
-        const page = e.target.getAttribute('data-page');
+        const page = e.target.dataset.page;
         if (page === 'manage-course.html') {
           mainContent.innerHTML = courseContent;
           attachEventListeners();
@@ -858,13 +933,42 @@
         }
         setActiveLink(page);
       });
-    });
+    }
 
     // Load manage courses by default on page load
-    document.addEventListener('DOMContentLoaded', () => {
-      attachEventListeners();
-      setActiveLink('manage-course.html');
-      loadCourses();
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // Start database handshake
+        await initializeDatabaseHandshake({
+          retryAttempts: 3,
+          retryDelay: 3000,
+          overlayOptions: {
+            title: 'Loading Dashboard...',
+            message: 'Please wait...',
+            size: 'medium',
+            theme: 'default'
+          },
+          onReady: () => {
+            attachEventListeners();
+            setActiveLink('manage-course.html');
+            loadCourses();
+          },
+          onError: (error) => {
+            console.error('Database handshake failed:', error);
+            // Still show UI but with error message
+            attachEventListeners();
+            setActiveLink('manage-course.html');
+            document.getElementById('courses-container').innerHTML = 
+              '<p style="color: red; text-align: center;">Unable to load dashboard. Please refresh the page to try again.</p>';
+          }
+        });
+      } catch (error) {
+        console.error('Failed to initialize database handshake:', error);
+        // Fallback to load without handshake
+        attachEventListeners();
+        setActiveLink('manage-course.html');
+        loadCourses();
+      }
     });
   </script>
 </body>

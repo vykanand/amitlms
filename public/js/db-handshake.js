@@ -1,173 +1,69 @@
 /**
- * Database Handshake and Loading Overlay Manager
- * Handles serverless database wake-up and UI loading states
+ * Database Handshake Manager
+ * Handles serverless database wake-up with session management
  */
 class DatabaseHandshake {
   constructor(options = {}) {
     this.retryAttempts = options.retryAttempts || 3;
     this.retryDelay = options.retryDelay || 2000;
     this.handshakeEndpoint = options.handshakeEndpoint || '/api/handshake';
+    this.heartbeatEndpoint = options.heartbeatEndpoint || '/api/heartbeat';
+    this.sessionCloseEndpoint = options.sessionCloseEndpoint || '/api/session/close';
     this.onReady = options.onReady || (() => {});
     this.onError = options.onError || ((error) => console.error('Database handshake error:', error));
+    this.showOverlay = options.showOverlay !== false;
+    this.overlayOptions = options.overlayOptions || {};
     
     this.isReady = false;
     this.currentAttempt = 0;
+    this.loadingOverlay = null;
+    this.sessionId = null;
+    this.heartbeatInterval = null;
+    this.heartbeatFrequency = 4 * 60 * 1000; // Send heartbeat every 4 minutes
     
-    this.createLoadingOverlay();
+    if (this.showOverlay) {
+      this.createLoadingOverlay();
+    }
+
+    // Setup page unload handler to close session
+    this.setupPageUnloadHandler();
   }
 
   /**
-   * Creates the loading overlay HTML structure
+   * Creates the loading overlay using the modular LoadingOverlay class
    */
   createLoadingOverlay() {
-    const overlay = document.createElement('div');
-    overlay.id = 'db-loading-overlay';
-    overlay.innerHTML = `
-      <div class="loading-container">
-        <div class="loading-spinner"></div>
-        <div class="loading-text">
-          <h3>Connecting to Database...</h3>
-          <p id="loading-message">Waking up serverless database, please wait...</p>
-          <div class="loading-progress">
-            <div class="progress-bar" id="progress-bar"></div>
-          </div>
-          <p class="loading-attempts" id="loading-attempts">Attempt <span id="current-attempt">1</span> of ${this.retryAttempts}</p>
-        </div>
-      </div>
-    `;
+    const defaultOptions = {
+      id: 'db-handshake-overlay',
+      title: 'Loading...',
+      message: 'Please wait a moment...',
+      showProgress: false,
+      showAttempts: false,
+      maxAttempts: this.retryAttempts
+    };
 
-    // Add CSS styles
-    const style = document.createElement('style');
-    style.textContent = `
-      #db-loading-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-        backdrop-filter: blur(5px);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      }
-
-      .loading-container {
-        background: white;
-        border-radius: 16px;
-        padding: 40px;
-        text-align: center;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        max-width: 400px;
-        min-width: 320px;
-      }
-
-      .loading-spinner {
-        width: 60px;
-        height: 60px;
-        border: 4px solid #f3f4f6;
-        border-top: 4px solid #3b82f6;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin: 0 auto 20px;
-      }
-
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-
-      .loading-text h3 {
-        margin: 0 0 10px 0;
-        color: #1f2937;
-        font-size: 20px;
-        font-weight: 600;
-      }
-
-      .loading-text p {
-        margin: 0 0 15px 0;
-        color: #6b7280;
-        font-size: 14px;
-        line-height: 1.4;
-      }
-
-      .loading-progress {
-        width: 100%;
-        height: 6px;
-        background: #f3f4f6;
-        border-radius: 3px;
-        overflow: hidden;
-        margin: 15px 0;
-      }
-
-      .progress-bar {
-        height: 100%;
-        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-        border-radius: 3px;
-        width: 0%;
-        transition: width 0.3s ease;
-        animation: pulse 2s ease-in-out infinite;
-      }
-
-      @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
-      }
-
-      .loading-attempts {
-        font-size: 12px;
-        color: #9ca3af;
-        margin-top: 10px;
-      }
-
-      .error-state {
-        color: #dc2626 !important;
-      }
-
-      .error-state .loading-spinner {
-        border-top-color: #dc2626;
-      }
-
-      .success-state {
-        color: #059669 !important;
-      }
-
-      .success-state .loading-spinner {
-        border-top-color: #059669;
-      }
-
-      @media (max-width: 480px) {
-        .loading-container {
-          margin: 20px;
-          padding: 30px 20px;
-        }
-      }
-    `;
-
-    document.head.appendChild(style);
-    document.body.appendChild(overlay);
+    this.loadingOverlay = new LoadingOverlay({
+      ...defaultOptions,
+      ...this.overlayOptions
+    });
   }
 
   /**
    * Updates the loading message and progress
    */
   updateLoadingState(message, progress = null, attempt = null) {
-    const messageEl = document.getElementById('loading-message');
-    const progressEl = document.getElementById('progress-bar');
-    const attemptEl = document.getElementById('current-attempt');
+    if (!this.loadingOverlay) return;
 
-    if (messageEl && message) {
-      messageEl.textContent = message;
+    if (message) {
+      this.loadingOverlay.updateMessage(message);
     }
 
-    if (progressEl && progress !== null) {
-      progressEl.style.width = `${progress}%`;
+    if (progress !== null) {
+      this.loadingOverlay.updateProgress(progress);
     }
 
-    if (attemptEl && attempt !== null) {
-      attemptEl.textContent = attempt;
+    if (attempt !== null) {
+      this.loadingOverlay.updateAttempt(attempt);
     }
   }
 
@@ -178,11 +74,7 @@ class DatabaseHandshake {
     this.currentAttempt++;
     
     try {
-      this.updateLoadingState(
-        `Attempting to connect... (${this.currentAttempt}/${this.retryAttempts})`,
-        (this.currentAttempt / this.retryAttempts) * 70,
-        this.currentAttempt
-      );
+      this.updateLoadingState('Loading...');
 
       const response = await fetch(this.handshakeEndpoint, {
         method: 'GET',
@@ -200,11 +92,18 @@ class DatabaseHandshake {
       const data = await response.json();
 
       if (data.success) {
-        this.updateLoadingState('Database connected successfully!', 100);
+        // Store session ID for future heartbeats
+        this.sessionId = data.sessionId;
         
-        // Add success state
-        const container = document.querySelector('.loading-container');
-        container.classList.add('success-state');
+        this.updateLoadingState('Ready!');
+        
+        // Set success state
+        if (this.loadingOverlay) {
+          this.loadingOverlay.setSuccessState('Ready!');
+        }
+
+        // Start heartbeat to keep session alive
+        this.startHeartbeat();
 
         // Wait a moment to show success, then hide overlay
         setTimeout(() => {
@@ -222,21 +121,19 @@ class DatabaseHandshake {
       console.error(`Handshake attempt ${this.currentAttempt} failed:`, error);
 
       if (this.currentAttempt < this.retryAttempts) {
-        this.updateLoadingState(
-          `Connection failed. Retrying in ${this.retryDelay / 1000} seconds...`,
-          (this.currentAttempt / this.retryAttempts) * 70
-        );
+        this.updateLoadingState('Retrying...');
 
         // Wait before retry
         await new Promise(resolve => setTimeout(resolve, this.retryDelay));
         return this.performHandshake();
       } else {
         // All attempts failed
-        this.updateLoadingState('Connection failed. Please refresh the page to try again.', 100);
+        this.updateLoadingState('Unable to load. Please refresh the page.');
         
-        // Add error state
-        const container = document.querySelector('.loading-container');
-        container.classList.add('error-state');
+        // Set error state
+        if (this.loadingOverlay) {
+          this.loadingOverlay.setErrorState('Unable to load. Please refresh the page.');
+        }
 
         this.onError(error);
         return false;
@@ -248,22 +145,109 @@ class DatabaseHandshake {
    * Hides the loading overlay
    */
   hideOverlay() {
-    const overlay = document.getElementById('db-loading-overlay');
-    if (overlay) {
-      overlay.style.opacity = '0';
-      overlay.style.transition = 'opacity 0.3s ease';
-      setTimeout(() => {
-        overlay.remove();
-      }, 300);
+    if (this.loadingOverlay) {
+      this.loadingOverlay.hide();
     }
+  }
+
+  /**
+   * Starts sending periodic heartbeats to keep the session alive
+   */
+  startHeartbeat() {
+    if (!this.sessionId || this.heartbeatInterval) return;
+
+    this.heartbeatInterval = setInterval(async () => {
+      try {
+        const response = await fetch(this.heartbeatEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ sessionId: this.sessionId })
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+          this.stopHeartbeat();
+        }
+      } catch {
+        // Silently handle heartbeat errors
+      }
+    }, this.heartbeatFrequency);
+  }
+
+  /**
+   * Stops the heartbeat mechanism
+   */
+  stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+  }
+
+  /**
+   * Closes the session on the server
+   */
+  async closeSession() {
+    if (!this.sessionId) return;
+
+    try {
+      await fetch(this.sessionCloseEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ sessionId: this.sessionId })
+      });
+    } catch {
+      // Silently handle session close errors
+    }
+
+    this.sessionId = null;
+    this.stopHeartbeat();
+  }
+
+  /**
+   * Setup handlers for page unload to clean up session
+   */
+  setupPageUnloadHandler() {
+    // Handle page unload/close
+    globalThis.addEventListener('beforeunload', () => {
+      this.closeSession();
+    });
+
+    // Handle page visibility change (tab switching)
+    globalThis.addEventListener('visibilitychange', () => {
+      if (globalThis.document.visibilityState === 'visible' && this.sessionId) {
+        // User returned - resume heartbeat if needed
+        if (!this.heartbeatInterval) {
+          this.startHeartbeat();
+        }
+      }
+    });
   }
 
   /**
    * Initiates the handshake process
    */
   async start() {
-    console.log('Starting database handshake...');
+    if (this.showOverlay && this.loadingOverlay) {
+      this.loadingOverlay.show();
+    }
+    
     return await this.performHandshake();
+  }
+
+  /**
+   * Gets current session status
+   */
+  getSessionInfo() {
+    return {
+      sessionId: this.sessionId,
+      isReady: this.isReady,
+      hasHeartbeat: !!this.heartbeatInterval
+    };
   }
 
   /**
@@ -272,14 +256,32 @@ class DatabaseHandshake {
   static async initialize(options = {}) {
     const handshake = new DatabaseHandshake(options);
     await handshake.start();
+    
+    // Store globally for session tracking
+    globalThis.currentDatabaseHandshake = handshake;
+    
     return handshake;
   }
 }
 
 // Global function to start database handshake with default options
-window.initializeDatabaseHandshake = function(options = {}) {
+globalThis.initializeDatabaseHandshake = function(options = {}) {
   return DatabaseHandshake.initialize(options);
 };
+
+// Global utility function to add session ID to API requests
+globalThis.addSessionToRequest = function(url, options = {}) {
+  const dbHandshake = globalThis.currentDatabaseHandshake;
+  if (dbHandshake?.sessionId) {
+    // Add session ID to headers
+    options.headers = options.headers || {};
+    options.headers['X-Session-ID'] = dbHandshake.sessionId;
+  }
+  return fetch(url, options);
+};
+
+// Store reference to current handshake instance
+globalThis.currentDatabaseHandshake = null;
 
 // Auto-export for module environments
 if (typeof module !== 'undefined' && module.exports) {
