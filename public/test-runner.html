@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Runner - Professional Assessment Platform</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="test-runner.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+  <div id="test-runner">
+    <!-- Header -->
+    <header class="test-header">
+      <div class="header-content">
+        <div class="test-info">
+          <h1 id="test-title">Loading Test...</h1>
+          <div class="test-meta">
+            <span id="question-count">Question 1 of 10</span>
+            <span id="time-remaining">Time: 45:00</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div id="user-info" class="user-info">
+            <div class="user-profile">
+              <div class="user-avatar-container">
+                <div class="user-avatar">
+                  <i class="fas fa-user"></i>
+                </div>
+                <div class="user-status online"></div>
+              </div>
+              <div class="user-details">
+                <div class="user-name" id="user-name">Loading...</div>
+                <div class="user-meta">
+                  <span class="user-role">Student</span>
+                  <span class="user-separator">•</span>
+                  <span class="user-status-text">Active</span>
+                </div>
+              </div>
+              <button class="user-menu-btn" id="user-menu-btn">
+                <i class="fas fa-chevron-down"></i>
+              </button>
+            </div>
+            <div class="user-dropdown" id="user-dropdown" style="display: none;">
+              <div class="dropdown-item" id="profile-item">
+                <i class="fas fa-user-circle"></i>
+                <span>View Profile</span>
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-item logout-item" id="logout-item">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="progress-container">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <span class="progress-text" id="progress-text">0%</span>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="test-content">
+      <div class="question-container">
+        <div id="question-card" class="question-card">
+          <div class="question-header">
+            <span class="question-number">Q1</span>
+            <span class="question-type" id="question-type">Multiple Choice</span>
+          </div>
+          <div class="question-text" id="question-text">
+            Loading question...
+          </div>
+          <div class="options-container" id="options-container">
+            <!-- Options will be rendered here -->
+          </div>
+          <div class="guidelines" id="guidelines" style="display:none;">
+            <i class="fas fa-info-circle"></i>
+            <span id="guidelines-text"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <div class="navigation-panel">
+        <div class="question-nav">
+          <div class="nav-grid" id="nav-grid">
+            <!-- Question buttons will be generated here -->
+          </div>
+        </div>
+        <div class="nav-actions">
+          <button id="next-btn" class="btn-nav btn-next" style="display:none;">
+            Submit Answer
+            <i class="fas fa-chevron-right"></i>
+          </button>
+          <button id="submit-btn" class="btn-submit" style="display:none;">
+            <i class="fas fa-check"></i>
+            Submit Test
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Resume Modal -->
+    <div id="resume-modal" class="modal-overlay" style="display:none;">
+      <div class="modal-content">
+        <h2><i class="fas fa-play-circle"></i> Resume Test</h2>
+        <p>You have an unfinished test. Would you like to resume where you left off?</p>
+        <div class="modal-actions">
+          <button id="resume-btn" class="btn-primary">Resume</button>
+          <button id="restart-btn" class="btn-secondary">Start Over</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Completion Modal -->
+    <div id="completion-modal" class="modal-overlay" style="display:none;">
+      <div class="modal-content completion-modal">
+        <div class="completion-icon">
+          <i class="fas fa-trophy"></i>
+        </div>
+        <h2>Test Completed!</h2>
+        <p>Congratulations! You have successfully completed the test.</p>
+        <div class="completion-stats">
+          <div class="stat">
+            <span class="stat-number" id="total-questions">10</span>
+            <span class="stat-label">Questions</span>
+          </div>
+          <div class="stat">
+            <span class="stat-number" id="answered-questions">10</span>
+            <span class="stat-label">Answered</span>
+          </div>
+          <div class="stat">
+            <span class="stat-number" id="completion-percentage">100%</span>
+            <span class="stat-label">Score</span>
+          </div>
+        </div>
+        <div id="score-breakdown" class="score-breakdown" style="display:none;">
+          <p>Score Breakdown:</p>
+          <p id="score-breakdown-text">MCQ: 8/10 correct<br>Descriptive: 1/2 graded</p>
+        </div>
+        <div class="modal-actions">
+          <button id="reattempt-btn" class="btn-warning">
+            <i class="fas fa-redo"></i>
+            Reattempt Test
+          </button>
+          <button id="view-report-btn" class="btn-secondary">
+            <i class="fas fa-chart-bar"></i>
+            View Detailed Report
+          </button>
+          <button id="back-to-dashboard-btn" class="btn-primary">
+            <i class="fas fa-home"></i>
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detailed Report Modal -->
+    <div id="report-modal" class="modal-overlay" style="display:none;">
+      <div class="modal-content report-modal">
+        <div class="modal-header">
+          <h2><i class="fas fa-chart-bar"></i> Test Evaluation Report</h2>
+          <button class="close-btn" id="close-report-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div id="report-content" class="report-content">
+          <!-- Report content will be generated here -->
+        </div>
+        <div class="modal-actions">
+          <button id="close-report-modal-btn" class="btn-secondary">
+            <i class="fas fa-times"></i>
+            Close
+          </button>
+          <button id="report-back-to-dashboard-btn" class="btn-primary">
+            <i class="fas fa-home"></i>
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    </div>
+
+  <script src="js/test-runner.js"></script>
+</body>
+</html>

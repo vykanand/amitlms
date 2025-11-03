@@ -123,9 +123,9 @@
             const tempCart = JSON.parse(localStorage.getItem('tempCart') || '[]');
             if (tempCart.length > 0) {
               let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-              for (const courseId of tempCart) {
-                if (!cart.includes(courseId)) {
-                  cart.push(courseId);
+              for (const item of tempCart) {
+                if (!cart.some(cartItem => cartItem.id === item.id && cartItem.type === item.type)) {
+                  cart.push(item);
                 }
               }
               localStorage.setItem('cart', JSON.stringify(cart));

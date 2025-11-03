@@ -79,6 +79,20 @@
       box-shadow: 0 8px 24px rgba(0,0,0,0.1);
       border: none;
     }
+    
+    /* Hide YouTube pause overlay and suggestions */
+    .ytp-pause-overlay,
+    .ytp-scroll-min,
+    .ytp-videowall-still,
+    .ytp-suggestions,
+    .ytp-endscreen-content,
+    .ytp-ce-element,
+    .ytp-cards-teaser,
+    .ytp-player-content.ytp-iv-drawer-enabled {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+    }
     .course-videos {
       margin-top: 1rem;
     }
@@ -194,7 +208,7 @@
 <body>
   <div class="container">
     <section class="course-header">
-      <img id="course-photo" src="https://via.placeholder.com/240x140.png?text=Course+Photo" alt="Course Photo" class="course-photo" />
+      <img id="course-photo" src="https://via.placeholder.com/240x140.png?text=Course+Photo" alt="Course" class="course-photo" />
       <div class="course-details">
         <h1 id="course-title" class="course-title">Loading...</h1>
         <p id="course-description" class="course-description">
@@ -216,20 +230,21 @@
     </section>
   </div>
 
-  <script>
+  <script type="module">
     // Function to get URL parameter
     function getUrlParameter(name) {
-      name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-      const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+      // Use String.raw to avoid double escaping and prefer replaceAll for clarity
+      name = name.replace('[', String.raw`\\[` ).replace(']', String.raw`\\]`);
+      const regex = new RegExp(String.raw`[\?&]${name}=([^&#]*)`);
       const results = regex.exec(location.search);
-      return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+      return results === null ? '' : decodeURIComponent(results[1].replaceAll('+', ' '));
     }
 
     // Function to convert YouTube URL to embeddable format
     function getEmbedUrl(url) {
       const videoId = extractVideoID(url);
       if (videoId) {
-        return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&iv_load_policy=3&showinfo=0`;
+        return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&showinfo=0&cc_load_policy=0&disablekb=1&fs=0&playsinline=1&end=9999`;
       }
       // Handle Google Drive
       if (url.includes('drive.google.com')) {
@@ -254,9 +269,16 @@
 
     // Function to extract the video ID from a YouTube URL
     function extractVideoID(url) {
-      const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|embed|shorts)\/|.*[?&]v=)|youtu\.be\/)([^&?\/]{11})|videoplayback.*id=([^&]+)/;
-      const match = url.match(regExp);
-      return (match && (match[1] || match[2])) || null;
+      // Further reduce regex complexity by splitting into multiple simple patterns
+      const short = url.match(/youtu\.be\/([^/?&]{11})/);
+      if (short && short[1]) return short[1];
+      const pathForm = url.match(/youtube\.com\/(?:embed|v|shorts)\/([^/?&]{11})/);
+      if (pathForm && pathForm[1]) return pathForm[1];
+      const paramForm = url.match(/[?&]v=([^&]{11})/);
+      if (paramForm && paramForm[1]) return paramForm[1];
+      const idMatch = url.match(/videoplayback.*id=([^&]+)/);
+      if (idMatch && idMatch[1]) return idMatch[1];
+      return null;
     }
 
     // Function to format duration with text
@@ -272,20 +294,16 @@
     }
 
     const courseId = getUrlParameter('id');
-    if (!courseId) {
-      document.getElementById('course-title').textContent = 'Course not found';
-      document.getElementById('course-description').textContent = 'Invalid course ID.';
-    } else {
-      fetch(`/api/courses/${courseId}`)
-        .then(response => response.json())
-        .then(course => {
-          console.log('Course data:', course);
-          if (course.error) {
-            document.getElementById('course-title').textContent = 'Course not found';
-            document.getElementById('course-description').textContent = course.error;
-            return;
-          }
-
+    if (courseId) {
+      try {
+        const response = await fetch(`/api/courses/${courseId}`);
+        const course = await response.json();
+        console.log('Course data:', course);
+        if (course.error) {
+          document.getElementById('course-title').textContent = 'Course not found';
+          document.getElementById('course-description').textContent = course.error;
+          // Early return to keep logic clear and simple
+        } else {
           // Populate course header
           document.getElementById('course-photo').src = course.coursepic || 'https://via.placeholder.com/240x140.png?text=Course+Photo';
           document.getElementById('course-title').textContent = course.coursename;
@@ -309,7 +327,7 @@
                 // New format: video is an object with metadata
                 return {
                   title: video.title || `Video ${index + 1}`,
-                  url: video.url,
+                  url: getEmbedUrl(video.url),
                   thumbnail: video.thumbnail || getThumbnail(video.url),
                   duration: video.duration || 'N/A',
                   author: video.author,
@@ -337,31 +355,89 @@
               </li>
             `).join('');
 
-            // Add click handlers
-            document.querySelectorAll('.video-item').forEach(item => {
+            // Add click handlers (prefer for..of and dataset accessors per lint)
+            for (const item of document.querySelectorAll('.video-item')) {
               item.addEventListener('click', () => {
-                const url = item.getAttribute('data-url');
-                const originalUrl = item.getAttribute('data-original');
-                if (originalUrl.includes('drive.google.com')) {
+                const url = item.dataset.url;
+                const originalUrl = item.dataset.original;
+                if (originalUrl && originalUrl.includes('drive.google.com')) {
                   window.open(originalUrl, '_blank');
                 } else {
                   let embedUrl = url;
-                  if (url.includes('youtube.com/embed/')) {
+                  if (url && url.includes('youtube.com/embed/')) {
                     embedUrl += (url.includes('?') ? '&' : '?') + 'autoplay=1';
                   }
                   demoIframe.src = embedUrl;
+                  hideYouTubeOverlays(demoIframe);
                 }
               });
-            });
+            }
           } else {
             videoList.innerHTML = '<li>No videos available for this course.</li>';
           }
-        })
-        .catch(error => {
-          console.error('Error fetching course:', error);
-          document.getElementById('course-title').textContent = 'Error loading course';
-          document.getElementById('course-description').textContent = 'Unable to load course details.';
+        }
+      } catch (error) {
+        console.error('Error fetching course:', error);
+        document.getElementById('course-title').textContent = 'Error loading course';
+        document.getElementById('course-description').textContent = 'Unable to load course details.';
+      }
+    } else {
+      document.getElementById('course-title').textContent = 'Course not found';
+      document.getElementById('course-description').textContent = 'Invalid course ID.';
+    }
+
+    // Function to hide YouTube overlays
+    function hideYouTubeOverlays(iframe) {
+      // Prefer positive condition per lint rule
+      if (iframe && iframe.src.includes('youtube.com')) {
+        // Add load event listener to inject CSS when iframe loads
+        iframe.addEventListener('load', function() {
+          try {
+            // Attempt to inject CSS to hide overlays (may be blocked by CORS)
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            if (iframeDoc) {
+              const style = iframeDoc.createElement('style');
+              style.textContent = `
+                .ytp-pause-overlay,
+                .ytp-scroll-min,
+                .ytp-videowall-still,
+                .ytp-suggestions,
+                .ytp-endscreen-content,
+                .ytp-ce-element,
+                .ytp-cards-teaser,
+                .ytp-player-content.ytp-iv-drawer-enabled {
+                  display: none !important;
+                  visibility: hidden !important;
+                  opacity: 0 !important;
+                }
+              `;
+              iframeDoc.head.appendChild(style);
+            }
+          } catch {
+            // Silently fail if cross-origin restrictions prevent access
+            console.log('Cannot inject CSS into iframe due to CORS restrictions');
+          }
         });
+        
+        // Also try to periodically check and hide overlays
+        const interval = setInterval(() => {
+          try {
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            if (iframeDoc) {
+              const overlays = iframeDoc.querySelectorAll('.ytp-pause-overlay, .ytp-suggestions, .ytp-endscreen-content');
+              for (const overlay of overlays) {
+                overlay.style.display = 'none';
+              }
+            }
+          } catch {
+            // Stop trying if we get CORS errors
+            clearInterval(interval);
+          }
+        }, 1000);
+        
+        // Clean up interval after 30 seconds
+        setTimeout(() => clearInterval(interval), 30000);
+      }
     }
 
     // Scroll behavior for header

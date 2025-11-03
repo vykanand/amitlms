@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="js/loading-overlay.js"></script>
   <script src="js/db-handshake.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
   <style>
     body {
       background: #f5f7fa;
@@ -129,6 +130,21 @@
       box-shadow: 0 8px 24px rgba(0,0,0,0.1);
       border: none;
       display: none;
+      pointer-events: auto;
+    }
+    
+    /* Hide YouTube pause overlay and suggestions */
+    .ytp-pause-overlay,
+    .ytp-scroll-min,
+    .ytp-videowall-still,
+    .ytp-suggestions,
+    .ytp-endscreen-content,
+    .ytp-ce-element,
+    .ytp-cards-teaser,
+    .ytp-player-content.ytp-iv-drawer-enabled {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
     }
     .course-videos {
       margin-top: 1rem;
@@ -296,7 +312,7 @@
     function getEmbedUrl(url) {
       const videoId = extractVideoID(url);
       if (videoId) {
-        return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&iv_load_policy=3&showinfo=0`;
+        return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&showinfo=0&cc_load_policy=0&disablekb=1&fs=0&playsinline=1&end=9999`;
       }
       // Handle Google Drive
       if (url.includes('drive.google.com')) {
@@ -412,6 +428,7 @@
         demoPlayButton.onclick = () => {
           demoPlayer.style.display = 'none';
           demoIframe.style.display = 'block';
+          hideYouTubeOverlays(demoIframe);
         };
       } else {
         demoPlayer.style.display = 'none';
@@ -456,7 +473,63 @@
           embedUrl += (url.includes('?') ? '&' : '?') + 'autoplay=1';
         }
         demoIframe.src = embedUrl;
+        
+        // Try to hide YouTube overlays after iframe loads
+        hideYouTubeOverlays(demoIframe);
       }
+    }
+
+    // Function to hide YouTube overlays
+    function hideYouTubeOverlays(iframe) {
+      if (!iframe || !iframe.src.includes('youtube.com')) return;
+      
+      // Add load event listener to inject CSS when iframe loads
+      iframe.addEventListener('load', function() {
+        try {
+          // Attempt to inject CSS to hide overlays (may be blocked by CORS)
+          const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          if (iframeDoc) {
+            const style = iframeDoc.createElement('style');
+            style.textContent = `
+              .ytp-pause-overlay,
+              .ytp-scroll-min,
+              .ytp-videowall-still,
+              .ytp-suggestions,
+              .ytp-endscreen-content,
+              .ytp-ce-element,
+              .ytp-cards-teaser,
+              .ytp-player-content.ytp-iv-drawer-enabled {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+              }
+            `;
+            iframeDoc.head.appendChild(style);
+          }
+        } catch {
+          // Silently fail if cross-origin restrictions prevent access
+          console.log('Cannot inject CSS into iframe due to CORS restrictions');
+        }
+      });
+      
+      // Also try to periodically check and hide overlays
+      const interval = setInterval(() => {
+        try {
+          const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+          if (iframeDoc) {
+            const overlays = iframeDoc.querySelectorAll('.ytp-pause-overlay, .ytp-suggestions, .ytp-endscreen-content');
+            for (const overlay of overlays) {
+              overlay.style.display = 'none';
+            }
+          }
+        } catch {
+          // Stop trying if we get CORS errors
+          clearInterval(interval);
+        }
+      }, 1000);
+      
+      // Clean up interval after 30 seconds
+      setTimeout(() => clearInterval(interval), 30000);
     }
 
     // Helper function to add video event handlers
@@ -559,8 +632,8 @@
       if (user) {
         // Add to cart if not already
         let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-        if (!cart.includes(courseId)) {
-          cart.push(courseId);
+        if (!cart.some(item => item.id === courseId && item.type === 'course')) {
+          cart.push({ id: courseId, type: 'course' });
           localStorage.setItem('cart', JSON.stringify(cart));
         }
         // Redirect to student dashboard
@@ -568,8 +641,8 @@
       } else {
         // Redirect to login, store in temporary cart
         let tempCart = JSON.parse(localStorage.getItem('tempCart') || '[]');
-        if (!tempCart.includes(courseId)) {
-          tempCart.push(courseId);
+        if (!tempCart.some(item => item.id === courseId && item.type === 'course')) {
+          tempCart.push({ id: courseId, type: 'course' });
           localStorage.setItem('tempCart', JSON.stringify(tempCart));
         }
         globalThis.location.href = 'studentlogin.html';

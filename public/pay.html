@@ -68,28 +68,110 @@
         <span class="app-name">Pay with Google Pay</span>
     </a> -->
 
+    <div style="margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 10px; text-align: center;">
+        <h3>After Payment</h3>
+        <p>Please upload a screenshot of your payment confirmation to complete the purchase.</p>
+        <input type="file" id="screenshot-input" accept="image/*" style="margin: 10px 0;">
+        <button id="submit-purchase-btn" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Submit Purchase</button>
+        <p id="submit-status" style="margin-top: 10px; color: #666;"></p>
+    </div>
+
     <script>
     const params = new URLSearchParams(window.location.search);
     const amount = params.get('amount');
     const orderId = params.get('orderId');
-    
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+
     document.getElementById('amount').innerHTML = `
         Order #${orderId}<br>
         Amount: Rs ${amount}
     `;
-    
+
     const upiIds = {
         paytm: '9910268739@ptsbi'
         // phonepe: 'vykanand@ybl',
         // gpay: 'nishagautamnishu@okhdfcbank'
     };
-    
+
     const merchantName = 'TandoorBaaz';
-    
+
     // Add order reference to payment links
-    document.getElementById('paytm-link').href = `paytmmp://pay?pa=${upiIds.paytm}&pn=${merchantName}&am=${amount}&cu=INR&tr=${orderId}`;
-    document.getElementById('phonepe-link').href = `phonepe://pay?pa=${upiIds.phonepe}&pn=${merchantName}&am=${amount}&cu=INR&tr=${orderId}`;
-    document.getElementById('gpay-link').href = `gpay://upi/pay?pa=${upiIds.gpay}&pn=${merchantName}&am=${amount}&cu=INR&tr=${orderId}`;
+    const paytmLink = document.getElementById('paytm-link');
+    if (paytmLink) {
+        paytmLink.href = `paytmmp://pay?pa=${upiIds.paytm}&pn=${merchantName}&am=${amount}&cu=INR&tr=${orderId}`;
+    }
+    const phonepeLink = document.getElementById('phonepe-link');
+    if (phonepeLink) {
+        phonepeLink.href = `phonepe://pay?pa=${upiIds.phonepe}&pn=${merchantName}&am=${amount}&cu=INR&tr=${orderId}`;
+    }
+    const gpayLink = document.getElementById('gpay-link');
+    if (gpayLink) {
+        gpayLink.href = `gpay://upi/pay?pa=${upiIds.gpay}&pn=${merchantName}&am=${amount}&cu=INR&tr=${orderId}`;
+    }
+
+    // Handle screenshot upload and submission
+    document.getElementById('submit-purchase-btn').addEventListener('click', async () => {
+        const fileInput = document.getElementById('screenshot-input');
+        const statusEl = document.getElementById('submit-status');
+
+        if (!fileInput.files[0]) {
+            statusEl.textContent = 'Please select a screenshot file.';
+            statusEl.style.color = 'red';
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+
+        reader.onload = async (e) => {
+            const screenshotBase64 = e.target.result.split(',')[1]; // Remove data:image/... prefix
+
+            try {
+                // Get cart items from localStorage
+                const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+
+                // Prepare cart items for submission
+                const cartItems = cart.map(item => ({
+                    type: item.type,
+                    id: item.id,
+                    price: 0 // Price will be fetched from DB
+                }));
+
+                const response = await fetch('/api/submit-purchase', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone: user.phone,
+                        amount: amount,
+                        orderId: orderId,
+                        screenshot: screenshotBase64,
+                        cartItems: cartItems
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    statusEl.textContent = 'Purchase submitted successfully! Redirecting to dashboard...';
+                    statusEl.style.color = 'green';
+                    // Clear cart after successful submission
+                    localStorage.removeItem('cart');
+
+                    setTimeout(() => {
+                        window.location.href = 'studentdashboard.html';
+                    }, 2000);
+                } else {
+                    statusEl.textContent = result.error || 'Failed to submit purchase.';
+                    statusEl.style.color = 'red';
+                }
+            } catch (error) {
+                console.error('Error submitting purchase:', error);
+                statusEl.textContent = 'Error submitting purchase. Please try again.';
+                statusEl.style.color = 'red';
+            }
+        };
+
+        reader.readAsDataURL(file);
+    });
 </script>
 
 </body>

@@ -6,6 +6,7 @@
   <title>Student Dashboard</title>
   <script src="js/loading-overlay.js"></script>
   <script src="js/db-handshake.js"></script>
+  <script src="js/tests.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -57,9 +58,291 @@
       margin: 0.25rem 0;
       color: #666;
     }
-    .no-courses {
-      text-align: center;
+    .test-progress {
+      margin-top: 2rem;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid #dee2e6;
+    }
+    .test-progress h4 {
+      margin: 0 0 1rem 0;
+      color: #495057;
+      font-size: 1.25rem;
+    }
+    .test-progress h5 {
+      margin: 1rem 0 0.5rem 0;
+      color: #6c757d;
+      font-size: 1rem;
+    }
+    .test-progress div {
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+      background: white;
+      border-radius: 4px;
+      border: 1px solid #e9ecef;
+    }
+    .test-card {
+      position: relative;
+    }
+
+    .test-meta {
+      display: flex;
+      gap: 1rem;
+      margin: 0.5rem 0;
+      font-size: 0.9rem;
       color: #666;
+    }
+
+    .test-meta span {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .test-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      border-radius: 6px;
+      margin: 0.5rem 0;
+      font-weight: 500;
+    }
+
+    .test-status.completed {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .test-status.in-progress {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+
+    .test-details {
+      background: #f8f9fa;
+      border-radius: 6px;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      border: 1px solid #dee2e6;
+    }
+
+    .detail-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.25rem;
+      font-size: 0.9rem;
+    }
+
+    .detail-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .detail-label {
+      font-weight: 500;
+      color: #495057;
+    }
+
+    .detail-value {
+      color: #007bff;
+      font-weight: 600;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: #007bff;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #0056b3;
+    }
+
+    .btn-success {
+      background: #28a745;
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #1e7e34;
+    }
+
+    .btn-warning {
+      background: #ffc107;
+      color: #212529;
+    }
+
+    .btn-warning:hover {
+      background: #e0a800;
+    }
+
+    .progress-item {
+      background: white;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border: 1px solid #dee2e6;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .progress-item.completed {
+      border-left: 4px solid #28a745;
+    }
+
+    .progress-item.in-progress {
+      border-left: 4px solid #ffc107;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .progress-header h5 {
+      margin: 0;
+      color: #495057;
+      font-size: 1.1rem;
+    }
+
+    .score-badge, .progress-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .score-badge {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .progress-badge {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .progress-details {
+      margin-bottom: 1rem;
+    }
+
+    .progress-bar {
+      background: #e9ecef;
+      height: 8px;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #007bff, #28a745);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .progress-item.in-progress .progress-fill {
+      background: linear-gradient(90deg, #ffc107, #fd7e14);
+    }
+
+    .progress-stats {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+
+    .view-report-btn, .resume-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .view-report-btn {
+      background: #28a745;
+      color: white;
+    }
+
+    .view-report-btn:hover {
+      background: #1e7e34;
+    }
+
+    .resume-btn {
+      background: #ffc107;
+      color: #212529;
+    }
+
+    .resume-btn:hover {
+      background: #e0a800;
+    }
+
+    .no-progress {
+      text-align: center;
+      padding: 2rem;
+      color: #6c757d;
+    }
+
+    .no-progress i {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      max-width: 90%;
+      max-height: 90%;
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+    }
+    .modal-content img {
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+      margin: 0 auto;
+    }
+    .close {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      color: white;
+      font-size: 30px;
+      font-weight: bold;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -70,9 +353,19 @@
     </div>
     <button class="logout-btn" onclick="logout()">Logout</button>
   </div>
-  <h1>My Courses</h1>
-  <div id="courses-container" class="courses-container">
-    <!-- Courses will be loaded here -->
+  <h2>My Purchased Courses</h2>
+  <div id="my-courses-container" class="courses-container">
+    <!-- Purchased courses will be loaded here -->
+  </div>
+
+  <h2>My Purchased Tests</h2>
+  <div id="my-tests-container" class="courses-container">
+    <!-- Purchased tests will be loaded here -->
+  </div>
+
+  <h2>Purchase History</h2>
+  <div id="purchase-history-container" class="courses-container">
+    <!-- Purchase history will be loaded here -->
   </div>
 
   <h2>Cart</h2>
@@ -80,9 +373,32 @@
     <!-- Cart courses will be loaded here -->
   </div>
 
-  <h2>Purchase More Courses</h2>
-  <div id="all-courses-container" class="courses-container">
-    <!-- All courses will be loaded here -->
+  <div style="margin-top: 2rem;">
+    <a href="index.html#courses" style="color: #007bff; text-decoration: none;">Add more courses</a> |
+    <a href="tests.html" style="color: #007bff; text-decoration: none;">Add more tests</a>
+  </div>
+
+  <div style="display: flex; gap: 2rem; margin-top: 2rem;">
+    <div style="flex: 1;">
+      <h2>Purchase More Courses</h2>
+      <div id="all-courses-container" class="courses-container">
+        <!-- All courses will be loaded here -->
+      </div>
+    </div>
+    <div style="flex: 1;">
+      <h2>Purchase More Tests</h2>
+      <div id="all-tests-container" class="courses-container">
+        <!-- All tests will be loaded here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for image viewing -->
+  <div id="image-modal" class="modal">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <div class="modal-content">
+      <img id="modal-image" src="" alt="Payment Screenshot">
+    </div>
   </div>
 
   <script>
@@ -95,9 +411,17 @@
     // Display user phone
     document.getElementById('user-phone').textContent = user.phone;
 
-    // Load user's courses
-    async function loadCourses() {
-      const container = document.getElementById('courses-container');
+    // Ensure user has tests array
+    if (!user.tests) {
+      user.tests = [];
+      localStorage.setItem('user', JSON.stringify(user));
+    }
+
+
+
+    // Load user's purchased courses (from approved purchases)
+    async function loadPurchasedCourses() {
+      const container = document.getElementById('my-courses-container');
 
       try {
         const response = await addSessionToRequest('/api/user/courses?phone=' + encodeURIComponent(user.phone));
@@ -122,8 +446,252 @@
           </a>
         `).join('');
       } catch (error) {
-        console.error('Error loading courses:', error);
-        container.innerHTML = '<p class="no-courses">Error loading courses.</p>';
+        console.error('Error loading purchased courses:', error);
+        container.innerHTML = '<p class="no-courses">Error loading purchased courses.</p>';
+      }
+    }
+
+
+
+    // Calculate test evaluation (MCQ + descriptive scores)
+    function calculateTestEvaluation(questions, sessionData) {
+      if (!questions) return { correct: 0, total: 0, score: 0, descriptiveCount: 0 };
+
+      let correctMCQ = 0;
+      let totalMCQ = 0;
+      let descriptiveCount = 0;
+      let totalScore = 0;
+
+      questions.forEach((question, index) => {
+        const userAnswer = sessionData.answers[index];
+
+        if (question.type === 'mcq') {
+          totalMCQ++;
+          // Check if answer is correct
+          if (userAnswer && question.correct && userAnswer.toLowerCase() === question.correct.toLowerCase()) {
+            correctMCQ++;
+            totalScore += 1; // 1 point per correct MCQ
+          }
+        } else if (question.type === 'desc') {
+          descriptiveCount++;
+          // For descriptive questions, check if admin has graded it
+          if (sessionData.descriptiveScores && sessionData.descriptiveScores[index] !== undefined) {
+            totalScore += sessionData.descriptiveScores[index];
+          }
+          // If not graded yet, don't add to score but count as attempted
+        }
+      });
+
+      return {
+        correct: correctMCQ,
+        total: totalMCQ,
+        score: totalScore,
+        descriptiveCount: descriptiveCount,
+        totalPossibleScore: totalMCQ + descriptiveCount // Assuming descriptive questions are worth 1 point each
+      };
+    }
+
+    // Load user's purchased tests (from approved purchases)
+    async function loadPurchasedTests() {
+      const container = document.getElementById('my-tests-container');
+      const progressDiv = document.createElement('div');
+      progressDiv.id = 'test-progress';
+      progressDiv.className = 'test-progress';
+      container.parentNode.insertBefore(progressDiv, container.nextSibling);
+
+      try {
+        const response = await addSessionToRequest('/api/user/tests?phone=' + encodeURIComponent(user.phone));
+        const userTests = await response.json();
+
+        if (!userTests || userTests.length === 0) {
+          container.innerHTML = '<p class="no-courses">No tests purchased yet.</p>';
+          return;
+        }
+
+        // Fetch test session
+        const sessionResponse = await fetch(`/api/user/testsession?phone=${user.phone}`);
+        let session = {};
+        if (sessionResponse.ok) {
+          session = await sessionResponse.json();
+          console.log('Fetched session data:', session);
+        } else {
+          console.error('Failed to fetch session data:', sessionResponse.status);
+          session = {};
+        }
+
+        container.innerHTML = userTests.map(test => {
+          // Check if test is completed or in progress
+          const sessionData = session[test.id];
+          let progressInfo = '';
+          let buttonText = 'Start Test';
+          let buttonClass = 'btn-primary';
+          let evaluation = null;
+          let detailedInfo = '';
+
+          if (sessionData) {
+            const totalQuestions = test.questions?.length || 0;
+            const answeredQuestions = Object.keys(sessionData.answers || {}).length;
+            const isCompleted = sessionData.completed || answeredQuestions >= totalQuestions;
+
+            if (isCompleted) {
+              evaluation = calculateTestEvaluation(test.questions, sessionData);
+              const scorePercentage = evaluation.totalPossibleScore > 0 ?
+                Math.round((evaluation.score / evaluation.totalPossibleScore) * 100) : 0;
+
+              progressInfo = `<div class="test-status completed">
+                <i class="fas fa-check-circle"></i>
+                <span>Completed: ${scorePercentage}% (${evaluation.score}/${evaluation.totalPossibleScore})</span>
+              </div>`;
+
+              buttonText = 'View Report';
+              buttonClass = 'btn-success';
+              detailedInfo = `
+                <div class="test-details">
+                  <div class="detail-item">
+                    <span class="detail-label">MCQ Score:</span>
+                    <span class="detail-value">${evaluation.correct}/${evaluation.total} correct</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Descriptive:</span>
+                    <span class="detail-value">${evaluation.descriptiveCount} questions</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Total Score:</span>
+                    <span class="detail-value">${evaluation.score}/${evaluation.totalPossibleScore}</span>
+                  </div>
+                </div>
+              `;
+            } else {
+              const percentage = totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
+              progressInfo = `<div class="test-status in-progress">
+                <i class="fas fa-clock"></i>
+                <span>In Progress: ${answeredQuestions}/${totalQuestions} questions (${percentage}%)</span>
+              </div>`;
+
+              buttonText = 'Resume Test';
+              buttonClass = 'btn-warning';
+              detailedInfo = `
+                <div class="test-details">
+                  <div class="detail-item">
+                    <span class="detail-label">Current Question:</span>
+                    <span class="detail-value">${(sessionData.currentIndex || 0) + 1} of ${totalQuestions}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Time Spent:</span>
+                    <span class="detail-value">Auto-saved</span>
+                  </div>
+                </div>
+              `;
+            }
+          }
+
+          return `
+          <div class="course-card test-card">
+            ${test.image ? `<img src="${test.image}" alt="${test.title}" onerror="this.style.display='none'" />` : ''}
+            <div class="course-info">
+              <h3>${test.title}</h3>
+              <p>${test.description || ''}</p>
+              <div class="test-meta">
+                <span><i class="fas fa-question-circle"></i> ${test.questions?.length || 0} questions</span>
+                <span><i class="fas fa-clock"></i> ${(test.questions?.length || 0) * 5} mins</span>
+                <span><i class="fas fa-rupee-sign"></i> ${test.price ? test.price : 'Free'}</span>
+              </div>
+              ${progressInfo}
+              ${detailedInfo}
+              <button onclick="window.location.href='test-runner.html?testId=${test.id}'" class="btn ${buttonClass}">
+                <i class="fas fa-${buttonText === 'View Report' ? 'chart-bar' : buttonText === 'Resume Test' ? 'play' : 'play'}"></i>
+                ${buttonText}
+              </button>
+            </div>
+          </div>
+        `}).join('');
+
+        // Show overall progress section
+        const progressDiv = document.getElementById('test-progress');
+        progressDiv.innerHTML = '<h4><i class="fas fa-chart-line"></i> Test Progress Summary</h4>';
+
+        console.log('Session data:', session);
+        console.log('User tests:', userTests);
+
+        const completedTests = [];
+        const inProgressTests = [];
+
+        if (Object.keys(session).length === 0) {
+          progressDiv.innerHTML += '<div class="no-progress"><i class="fas fa-info-circle"></i><p>No test sessions found. Start taking a test to see progress here.</p></div>';
+        } else {
+          Object.keys(session).forEach(testId => {
+            const s = session[testId];
+            const test = userTests.find(t => String(t.id) === testId);
+            const title = test ? test.title : `Test ${testId}`;
+            const totalQuestions = test ? (test.questions?.length || 0) : 0;
+            const answeredQuestions = Object.keys(s.answers || {}).length;
+            const isCompleted = s.completed || answeredQuestions >= totalQuestions;
+
+            console.log(`Processing test ${testId}:`, s, `answered: ${answeredQuestions}, total: ${totalQuestions}, completed: ${isCompleted}`);
+
+            if (isCompleted) {
+              const evaluation = calculateTestEvaluation(test ? test.questions : [], s);
+              const scorePercentage = evaluation.totalPossibleScore > 0 ?
+                Math.round((evaluation.score / evaluation.totalPossibleScore) * 100) : 0;
+
+              completedTests.push(`
+                <div class="progress-item completed">
+                  <div class="progress-header">
+                    <h5>${title}</h5>
+                    <span class="score-badge">${scorePercentage}%</span>
+                  </div>
+                  <div class="progress-details">
+                    <div class="progress-bar">
+                      <div class="progress-fill" style="width: ${scorePercentage}%"></div>
+                    </div>
+                    <div class="progress-stats">
+                      <span>MCQ: ${evaluation.correct}/${evaluation.total}</span>
+                      <span>Score: ${evaluation.score}/${evaluation.totalPossibleScore}</span>
+                    </div>
+                  </div>
+                  <a href="test-runner.html?testId=${testId}" class="view-report-btn">
+                    <i class="fas fa-chart-bar"></i> View Detailed Report
+                  </a>
+                </div>
+              `);
+            } else {
+              const percentage = totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
+              inProgressTests.push(`
+                <div class="progress-item in-progress">
+                  <div class="progress-header">
+                    <h5>${title}</h5>
+                    <span class="progress-badge">${percentage}%</span>
+                  </div>
+                  <div class="progress-details">
+                    <div class="progress-bar">
+                      <div class="progress-fill" style="width: ${percentage}%"></div>
+                    </div>
+                    <div class="progress-stats">
+                      <span>${answeredQuestions}/${totalQuestions} questions</span>
+                      <span>Question ${s.currentIndex + 1} of ${totalQuestions}</span>
+                    </div>
+                  </div>
+                  <a href="test-runner.html?testId=${testId}" class="resume-btn">
+                    <i class="fas fa-play"></i> Resume Test
+                  </a>
+                </div>
+              `);
+            }
+          });
+
+          if (completedTests.length > 0) {
+            progressDiv.innerHTML += '<h5><i class="fas fa-check-circle"></i> Completed Tests</h5>' + completedTests.join('');
+          }
+          if (inProgressTests.length > 0) {
+            progressDiv.innerHTML += '<h5><i class="fas fa-clock"></i> In Progress</h5>' + inProgressTests.join('');
+          }
+          if (completedTests.length === 0 && inProgressTests.length === 0) {
+            progressDiv.innerHTML += '<div class="no-progress"><i class="fas fa-info-circle"></i><p>No active test sessions found.</p></div>';
+          }
+        }
+      } catch (error) {
+        console.error('Error loading purchased tests:', error);
+        container.innerHTML = '<p class="no-courses">Error loading purchased tests.</p>';
       }
     }
 
@@ -136,42 +704,79 @@
     async function loadCart() {
       const container = document.getElementById('cart-container');
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+
       if (cart.length === 0) {
-        container.innerHTML = '<p class="no-courses">No courses in cart.</p>';
+        container.innerHTML = '<p class="no-courses">No items in cart.</p>';
         return;
       }
 
-      try {
-        const response = await addSessionToRequest('/api/courses');
-        const allCourses = await response.json();
-        const cartCourses = allCourses.filter(course => cart.includes(course.id.toString()) && !user.courses.includes(course.id));
+      let coursesHtml = '';
+      let testsHtml = '';
+      let total = 0;
 
-        if (cartCourses.length === 0) {
-          container.innerHTML = '<p class="no-courses">No courses in cart.</p>';
-          return;
+      try {
+        // Load courses from cart
+        const courseItems = cart.filter(item => item.type === 'course');
+        if (courseItems.length > 0) {
+          const response = await addSessionToRequest('/api/courses');
+          const allCourses = await response.json();
+          const cartCourses = allCourses.filter(course => {
+            const inCart = courseItems.some(item => item.id === course.id.toString());
+            const notPurchased = !user.courses.includes(course.id.toString());
+            return inCart && notPurchased;
+          });
+
+          if (cartCourses.length > 0) {
+            coursesHtml = cartCourses.map(course => `
+              <div class="course-card">
+                <img src="${course.coursepic || 'https://via.placeholder.com/100'}" alt="${course.coursename}" />
+                <div class="course-info">
+                  <h3>${course.coursename}</h3>
+                  <p>${course.coursedesc}</p>
+                  <p>Duration: ${course.duration}</p>
+                  <p>Price: ₹${course.price}</p>
+                </div>
+              </div>
+            `).join('');
+            total += cartCourses.reduce((sum, course) => sum + Number.parseInt(course.price, 10), 0);
+          }
         }
 
-        const coursesHtml = cartCourses.map(course => `
-          <div class="course-card">
-            <img src="${course.coursepic || 'https://via.placeholder.com/100'}" alt="${course.coursename}" />
-            <div class="course-info">
-              <h3>${course.coursename}</h3>
-              <p>${course.coursedesc}</p>
-              <p>Duration: ${course.duration}</p>
-              <p>Price: ₹${course.price}</p>
+        // Load tests from cart
+        const testItems = cart.filter(item => item.type === 'test');
+        if (testItems.length > 0) {
+          const allSeries = await TestsApi.getAllSeries();
+          const cartTests = allSeries.filter(test => testItems.some(item => item.id === test.id.toString()));
+
+          if (cartTests.length > 0) {
+            testsHtml = cartTests.map(test => `
+              <div class="course-card">
+                ${test.image ? `<img src="${test.image}" alt="${test.title}" onerror="this.style.display='none'" />` : ''}
+                <div class="course-info">
+                  <h3>${test.title}</h3>
+                  <p>${test.description || ''}</p>
+                  <p>Questions: ${test.questions?.length || 0}</p>
+                  <p>Time: ${(test.questions?.length || 0) * 5} mins</p>
+                  <p>Price: ${test.price ? `₹${test.price}` : 'Free'}</p>
+                </div>
+              </div>
+            `).join('');
+            total += cartTests.reduce((sum, test) => sum + (Number.parseInt(test.price, 10) || 0), 0);
+          }
+        }
+
+        if (coursesHtml || testsHtml) {
+          container.innerHTML = `
+            ${coursesHtml}
+            ${testsHtml}
+            <div style="margin-top: 1rem; padding: 1rem; background: #e8f5e8; border-radius: 8px; text-align: right;">
+              <h3>Total: ₹${total}</h3>
+              <button onclick="payForCart(${total})" style="background: #28a745; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; font-size: 1rem; cursor: pointer;">Pay Now for All</button>
             </div>
-          </div>
-        `).join('');
-
-        const total = cartCourses.reduce((sum, course) => sum + Number.parseInt(course.price, 10), 0);
-
-        container.innerHTML = `
-          ${coursesHtml}
-          <div style="margin-top: 1rem; padding: 1rem; background: #e8f5e8; border-radius: 8px; text-align: right;">
-            <h3>Total: ₹${total}</h3>
-            <button onclick="payForCart(${total})" style="background: #28a745; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; font-size: 1rem; cursor: pointer;">Pay Now for All</button>
-          </div>
-        `;
+          `;
+        } else {
+          container.innerHTML = '<p class="no-courses">No items in cart.</p>';
+        }
       } catch (error) {
         console.error('Error loading cart:', error);
         container.innerHTML = '<p class="no-courses">Error loading cart.</p>';
@@ -179,7 +784,7 @@
     }
 
     function payForCart(total) {
-      const orderId = 'cart-' + user.phone + '-' + Date.now();
+      const orderId = user.phone + '-' + Date.now();
       globalThis.location.href = `pay.html?amount=${total}&orderId=${orderId}`;
     }
 
@@ -190,7 +795,7 @@
       try {
         const response = await addSessionToRequest('/api/courses');
         const allCourses = await response.json();
-        const availableCourses = allCourses.filter(course => !user.courses.includes(course.id));
+        const availableCourses = allCourses.filter(course => !user.courses.includes(course.id.toString()));
 
         if (availableCourses.length === 0) {
           container.innerHTML = '<p class="no-courses">No courses available.</p>';
@@ -205,7 +810,7 @@
               <p>${course.coursedesc}</p>
               <p>Duration: ${course.duration}</p>
               <p>Price: ₹${course.price}</p>
-              <button onclick="addToCart(${course.id})">Add to Cart</button>
+              <button onclick="addToCart(${course.id})" style="background: #007bff; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Add to Cart</button>
             </div>
           </div>
         `).join('');
@@ -215,14 +820,98 @@
       }
     }
 
+    // Load all tests
+    async function loadAllTests() {
+      const container = document.getElementById('all-tests-container');
+
+      try {
+        const allSeries = await TestsApi.getAllSeries();
+        const availableTests = allSeries.filter(test => !user.tests || !user.tests.includes(test.id));
+
+        if (availableTests.length === 0) {
+          container.innerHTML = '<p class="no-courses">No tests available.</p>';
+          return;
+        }
+
+        container.innerHTML = availableTests.map(test => `
+          <div class="course-card">
+            ${test.image ? `<img src="${test.image}" alt="${test.title}" onerror="this.style.display='none'" />` : ''}
+            <div class="course-info">
+              <h3>${test.title}</h3>
+              <p>${test.description || ''}</p>
+              <p>Questions: ${test.questions?.length || 0}</p>
+              <p>Time: ${(test.questions?.length || 0) * 5} mins</p>
+              <p>Price: ${test.price ? `₹${test.price}` : 'Free'}</p>
+              <button onclick="addTestToCart('${test.id}')" style="background: #28a745; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Add to Cart</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading all tests:', error);
+        container.innerHTML = '<p class="no-courses">Error loading tests.</p>';
+      }
+    }
+
     function addToCart(courseId) {
       courseId = courseId.toString();
       let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      if (!cart.includes(courseId)) {
-        cart.push(courseId);
+      if (!cart.some(item => item.id === courseId && item.type === 'course')) {
+        cart.push({ id: courseId, type: 'course' });
         localStorage.setItem('cart', JSON.stringify(cart));
         location.reload();
       }
+    }
+
+    function addTestToCart(testId) {
+      testId = testId.toString();
+      let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      if (!cart.some(item => item.id === testId && item.type === 'test')) {
+        cart.push({ id: testId, type: 'test' });
+        localStorage.setItem('cart', JSON.stringify(cart));
+        location.reload();
+      }
+    }
+
+    // Load purchase history
+    async function loadPurchaseHistory() {
+      const container = document.getElementById('purchase-history-container');
+
+      try {
+        const response = await fetch(`/api/user/purchases?phone=${user.phone}`);
+        const purchases = await response.json();
+
+        if (purchases.length === 0) {
+          container.innerHTML = '<p class="no-courses">No purchase history.</p>';
+          return;
+        }
+
+        const purchaseHtml = purchases.map(purchase => `
+          <div class="course-card">
+            <div class="course-info">
+              <h3>Order ID: ${purchase.orderId}</h3>
+              <p>Items: ${purchase.items.map(item => `${item.type} ${item.id}`).join(', ')}</p>
+              <p>Amount: ₹${purchase.amount}</p>
+              <p>Status: <span style="color: ${purchase.status === 'approved' ? 'green' : purchase.status === 'rejected' ? 'red' : 'orange'};">${purchase.status}</span></p>
+              <p>Date: ${new Date(purchase.createdAt).toLocaleDateString()}</p>
+              ${purchase.screenshot ? `<p><img src="${purchase.screenshot}" alt="Payment Screenshot" style="max-width: 200px; cursor: pointer;" onclick="openModal('${purchase.screenshot}')"></p>` : ''}
+            </div>
+          </div>
+        `).join('');
+
+        container.innerHTML = purchaseHtml;
+      } catch (error) {
+        console.error('Error loading purchase history:', error);
+        container.innerHTML = '<p class="no-courses">Error loading purchase history.</p>';
+      }
+    }
+
+    function openModal(imageSrc) {
+      document.getElementById('modal-image').src = imageSrc;
+      document.getElementById('image-modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('image-modal').style.display = 'none';
     }
 
     // Initialize database handshake and load content when ready
@@ -239,22 +928,28 @@
             theme: 'default'
           },
           onReady: () => {
-            loadCourses();
+            loadPurchasedCourses();
+            loadPurchasedTests();
+            loadPurchaseHistory();
             loadCart();
             loadAllCourses();
+            loadAllTests();
           },
           onError: (error) => {
             console.error('Database handshake failed:', error);
-            document.getElementById('courses-container').innerHTML = 
+            document.getElementById('courses-container').innerHTML =
               '<p class="no-courses">Unable to load dashboard. Please refresh the page to try again.</p>';
           }
         });
       } catch (error) {
         console.error('Failed to initialize database handshake:', error);
         // Fallback to load without handshake
-        loadCourses();
+        loadPurchasedCourses();
+        loadPurchasedTests();
+        loadPurchaseHistory();
         loadCart();
         loadAllCourses();
+        loadAllTests();
       }
     });
   </script>

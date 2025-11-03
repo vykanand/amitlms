@@ -1,30 +1,335 @@
-<div style="padding: 1.5rem; max-width: 900px; margin: 2rem auto; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #2d3748;">
-  <h1 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 1.5rem;">Manage Users</h1>
-  <button style="background: linear-gradient(90deg, #3182ce, #d53f8c); color: white; padding: 0.5rem 1.25rem; border-radius: 8px; font-weight: 600; border: none; cursor: pointer; margin-bottom: 1.5rem; transition: background 0.3s ease;">
-    Add New User
-  </button>
-  <div style="display: flex; flex-direction: column; gap: 1.25rem;">
-    <div style="background: #edf2f7; border-radius: 12px; padding: 1rem 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <div style="font-weight: 700; font-size: 1.25rem;">John Doe</div>
-        <div style="color: #718096;">Email: john@example.com</div>
-        <div style="color: #718096;">Role: Student</div>
-      </div>
-      <div>
-        <button style="color: #3182ce; font-weight: 600; background: none; border: none; cursor: pointer; margin-right: 1rem;">Edit</button>
-        <button style="color: #e53e3e; font-weight: 600; background: none; border: none; cursor: pointer;">Delete</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Users - LMS</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #f7fafc; }
+        .container { padding: 1.5rem; max-width: 1200px; margin: 2rem auto; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+        h1 { font-size: 2.25rem; font-weight: 700; margin-bottom: 1.5rem; color: #2d3748; }
+        .btn { background: linear-gradient(90deg, #3182ce, #d53f8c); color: white; padding: 0.5rem 1.25rem; border-radius: 8px; font-weight: 600; border: none; cursor: pointer; transition: background 0.3s ease; }
+        .btn:hover { opacity: 0.9; }
+        .user-card { background: #edf2f7; border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .user-info { display: flex; justify-content: space-between; align-items: center; }
+        .user-details { flex: 1; }
+        .user-name { font-weight: 700; font-size: 1.25rem; margin-bottom: 0.5rem; }
+        .user-meta { color: #718096; font-size: 0.9rem; }
+        .user-actions { display: flex; gap: 0.5rem; }
+        .btn-secondary { background: #e2e8f0; color: #4a5568; border: 1px solid #cbd5e0; }
+        .btn-secondary:hover { background: #cbd5e0; }
+        .btn-danger { background: #e53e3e; color: white; }
+        .btn-danger:hover { background: #c53030; }
+        .purchase-history { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e8f0; }
+        .purchase-item { background: #f7fafc; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid #3182ce; }
+        .purchase-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .purchase-order { font-weight: 600; }
+        .purchase-status { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+        .status-pending { background: #fef5e7; color: #d69e2e; }
+        .status-approved { background: #c6f6d5; color: #38a169; }
+        .status-rejected { background: #fed7d7; color: #e53e3e; }
+        .purchase-details { font-size: 0.9rem; color: #4a5568; }
+        .purchase-items { margin-top: 0.5rem; }
+        .purchase-item-detail { display: inline-block; background: #e2e8f0; padding: 0.25rem 0.5rem; border-radius: 4px; margin-right: 0.5rem; margin-bottom: 0.25rem; font-size: 0.8rem; }
+        .approve-actions { margin-top: 0.5rem; }
+        .approve-btn { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600; border: none; cursor: pointer; margin-right: 0.5rem; }
+        .approve-yes { background: #38a169; color: white; }
+        .approve-no { background: #e53e3e; color: white; }
+        .loading { text-align: center; padding: 2rem; color: #718096; }
+        .error { color: #e53e3e; padding: 1rem; background: #fed7d7; border-radius: 8px; margin-bottom: 1rem; }
+        .modal {
+          display: none;
+          position: fixed;
+          z-index: 1000;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0,0,0,0.8);
+          justify-content: center;
+          align-items: center;
+        }
+        .modal-content {
+          max-width: 90%;
+          max-height: 90%;
+          background: white;
+          padding: 1rem;
+          border-radius: 8px;
+        }
+        .modal-content img {
+          max-width: 100%;
+          max-height: 100%;
+          display: block;
+          margin: 0 auto;
+        }
+        .grading-section { margin-top: 2rem; padding-top: 2rem; border-top: 2px solid #e2e8f0; }
+        .grading-card { background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 1rem; }
+        .grading-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .grading-title { font-weight: 600; color: #0c4a6e; }
+        .grading-meta { font-size: 0.9rem; color: #64748b; }
+        .grading-answer { background: #ffffff; padding: 0.75rem; border-radius: 8px; margin: 0.5rem 0; border-left: 4px solid #0ea5e9; white-space: pre-wrap; }
+        .grading-actions { display: flex; gap: 0.5rem; align-items: center; }
+        .score-input { width: 60px; padding: 0.25rem; border: 1px solid #cbd5e0; border-radius: 4px; text-align: center; }
+        .grade-btn { padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600; border: none; cursor: pointer; }
+        .grade-submit { background: #059669; color: white; }
+        .grade-submit:hover { background: #047857; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="error-message" class="error" style="display: none;"></div>
+        <div id="loading" class="loading">Loading users...</div>
+        <div id="users-list"></div>
+        <div id="grading-section" class="grading-section"></div>
+    </div>
+
+    <!-- Modal for image viewing -->
+    <div id="image-modal" class="modal">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <div class="modal-content">
+        <img id="modal-image" src="" alt="Payment Screenshot">
       </div>
     </div>
-    <div style="background: #edf2f7; border-radius: 12px; padding: 1rem 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <div style="font-weight: 700; font-size: 1.25rem;">Jane Smith</div>
-        <div style="color: #718096;">Email: jane@example.com</div>
-        <div style="color: #718096;">Role: Admin</div>
-      </div>
-      <div>
-        <button style="color: #3182ce; font-weight: 600; background: none; border: none; cursor: pointer; margin-right: 1rem;">Edit</button>
-        <button style="color: #e53e3e; font-weight: 600; background: none; border: none; cursor: pointer;">Delete</button>
-      </div>
-    </div>
-  </div>
-</div>
+
+    <script>
+        let users = [];
+
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users');
+                if (!response.ok) throw new Error('Failed to load users');
+                users = await response.json();
+                renderUsers();
+            } catch (error) {
+                showError('Failed to load users: ' + error.message);
+            }
+        }
+
+        async function loadUserPurchases(phone) {
+            try {
+                const response = await fetch(`/api/user/purchases?phone=${encodeURIComponent(phone)}`);
+                if (!response.ok) throw new Error('Failed to load purchases');
+                const purchases = await response.json();
+                // Show all purchases for admin view
+                return purchases;
+            } catch (error) {
+                console.error('Failed to load purchases:', error);
+                return [];
+            }
+        }
+
+        async function approvePurchase(phone, orderId, approved) {
+            try {
+                const response = await fetch('/api/approve-purchase', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, orderId, approved })
+                });
+                if (!response.ok) throw new Error('Failed to update purchase');
+                const result = await response.json();
+                alert(result.message);
+                // Reload users to refresh data
+                await loadUsers();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        function renderUsers() {
+            const container = document.getElementById('users-list');
+            container.innerHTML = '';
+
+            if (users.length === 0) {
+                container.innerHTML = '<p>No users found.</p>';
+                return;
+            }
+
+            users.forEach(async (user) => {
+                const userCard = document.createElement('div');
+                userCard.className = 'user-card';
+
+                const purchases = await loadUserPurchases(user.name);
+
+                userCard.innerHTML = `
+                    <div class="user-info">
+                        <div class="user-details">
+                            <div class="user-name">${user.name}</div>
+                            <div class="user-meta">Phone: ${user.name}</div>
+                            <div class="user-meta">Role: ${user.role}</div>
+                            ${user.purchaseblob ? `<div class="user-meta"><img src="${user.purchaseblob}" alt="Purchase Screenshot" style="max-width: 100px; max-height: 100px; cursor: pointer;" onclick="openModal('${user.purchaseblob}')"></div>` : ''}
+                        </div>
+                        <div class="user-actions">
+                            <button class="btn btn-secondary" onclick="editUser('${user.name}')">Edit</button>
+                            <button class="btn btn-danger" onclick="deleteUser('${user.name}')">Delete</button>
+                        </div>
+                    </div>
+                    ${purchases.length > 0 ? `
+                        <div class="purchase-history">
+                            <h4 style="margin-bottom: 0.5rem; color: #2d3748;">Purchase History (${purchases.length})</h4>
+                            ${purchases.map(purchase => `
+                                <div class="purchase-item">
+                                    <div class="purchase-header">
+                                        <span class="purchase-order">Order: ${purchase.orderId}</span>
+                                        <span class="purchase-status status-${purchase.status}">${purchase.status.toUpperCase()}</span>
+                                    </div>
+                                    <div class="purchase-details">
+                                        <div>Amount: ₹${purchase.amount}</div>
+                                        <div>Date: ${new Date(purchase.createdAt).toLocaleDateString()}</div>
+                                        <div class="purchase-items">
+                                            ${purchase.items.map(item => `<span class="purchase-item-detail">${item.type}: ${item.name || item.id}</span>`).join('')}
+                                        </div>
+                                        ${purchase.screenshot ? `<div><img src="${purchase.screenshot}" alt="Payment Screenshot" style="max-width: 200px; cursor: pointer;" onclick="openModal('${purchase.screenshot}')"></div>` : ''}
+                                        ${purchase.status === 'pending' ? `
+                                            <div class="approve-actions">
+                                                <button class="approve-btn approve-yes" onclick="approvePurchase('${user.name}', '${purchase.orderId}', true)">Approve</button>
+                                                <button class="approve-btn approve-no" onclick="approvePurchase('${user.name}', '${purchase.orderId}', false)">Reject</button>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                `;
+
+                container.appendChild(userCard);
+            });
+
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function editUser(phone) {
+            const newPhone = prompt('Enter new phone number:', phone);
+            if (newPhone && newPhone !== phone) {
+                // Implement edit functionality
+                alert('Edit functionality not implemented yet');
+            }
+        }
+
+        function deleteUser(phone) {
+            if (confirm(`Are you sure you want to delete user ${phone}?`)) {
+                // Implement delete functionality
+                alert('Delete functionality not implemented yet');
+            }
+        }
+
+        function openModal(imageSrc) {
+          document.getElementById('modal-image').src = imageSrc;
+          document.getElementById('image-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+          document.getElementById('image-modal').style.display = 'none';
+        }
+
+        async function loadDescriptiveGrading() {
+            try {
+                const response = await fetch('/api/users');
+                if (!response.ok) throw new Error('Failed to load users');
+                const allUsers = await response.json();
+
+                const gradingContainer = document.getElementById('grading-section');
+                gradingContainer.innerHTML = '<h3>Descriptive Questions Needing Grading</h3>';
+
+                let hasGradingItems = false;
+
+                for (const user of allUsers) {
+                    // Get user test session
+                    const sessionResponse = await fetch(`/api/user/testsession?phone=${encodeURIComponent(user.name)}`);
+                    if (!sessionResponse.ok) continue;
+                    const session = await sessionResponse.json();
+
+                    // Get user tests
+                    const testsResponse = await fetch(`/api/user/tests?phone=${encodeURIComponent(user.name)}`);
+                    if (!testsResponse.ok) continue;
+                    const userTests = await testsResponse.json();
+
+                    // Check each test for descriptive questions needing grading
+                    for (const test of userTests) {
+                        const sessionData = session[test.id];
+                        if (!sessionData || !sessionData.completed) continue;
+
+                        // Get test details
+                        const testResponse = await fetch(`/api/tests/${test.id}`);
+                        if (!testResponse.ok) continue;
+                        const testDetails = await testResponse.json();
+
+                        // Check for descriptive questions
+                        testDetails.questions.forEach((question, index) => {
+                            if (question.type === 'desc') {
+                                const userAnswer = sessionData.answers[index];
+                                const currentScore = sessionData.descriptiveScores ? sessionData.descriptiveScores[index] : undefined;
+
+                                if (userAnswer && userAnswer.trim() !== '' && currentScore === undefined) {
+                                    hasGradingItems = true;
+                                    const gradingCard = document.createElement('div');
+                                    gradingCard.className = 'grading-card';
+                                    gradingCard.innerHTML = `
+                                        <div class="grading-header">
+                                            <div>
+                                                <div class="grading-title">${test.title} - Q${index + 1}</div>
+                                                <div class="grading-meta">Student: ${user.name} | ${question.type.toUpperCase()}</div>
+                                            </div>
+                                        </div>
+                                        <div class="grading-meta">${question.text || question.question || 'Question text not available'}</div>
+                                        <div class="grading-answer">${userAnswer}</div>
+                                        <div class="grading-actions">
+                                            <input type="number" class="score-input" id="score-${user.name}-${test.id}-${index}" min="0" max="1" step="0.5" placeholder="0-1">
+                                            <button class="grade-btn grade-submit" onclick="submitGrade('${user.name}', '${test.id}', ${index})">Submit Grade</button>
+                                        </div>
+                                    `;
+                                    gradingContainer.appendChild(gradingCard);
+                                }
+                            }
+                        });
+                    }
+                }
+
+                if (!hasGradingItems) {
+                    gradingContainer.innerHTML += '<p>No descriptive questions need grading at this time.</p>';
+                }
+            } catch (error) {
+                console.error('Failed to load grading items:', error);
+                document.getElementById('grading-section').innerHTML = '<p>Error loading grading items.</p>';
+            }
+        }
+
+        async function submitGrade(phone, testId, questionIndex) {
+            const scoreInput = document.getElementById(`score-${phone}-${testId}-${questionIndex}`);
+            const score = parseFloat(scoreInput.value);
+
+            if (isNaN(score) || score < 0 || score > 1) {
+                alert('Please enter a valid score between 0 and 1');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/user/grade-descriptive', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, testId, questionIndex, score })
+                });
+
+                if (!response.ok) throw new Error('Failed to submit grade');
+
+                alert('Grade submitted successfully!');
+                // Reload grading section
+                await loadDescriptiveGrading();
+            } catch (error) {
+                alert('Error submitting grade: ' + error.message);
+            }
+        }
+
+        // Load users and grading on page load
+        loadUsers();
+        loadDescriptiveGrading();
+    </script>
+</body>
+</html>

@@ -199,6 +199,20 @@
       font-size: 0.8rem;
       color: #718096;
     }
+    
+    /* Hide YouTube pause overlay and suggestions */
+    .ytp-pause-overlay,
+    .ytp-scroll-min,
+    .ytp-videowall-still,
+    .ytp-suggestions,
+    .ytp-endscreen-content,
+    .ytp-ce-element,
+    .ytp-cards-teaser,
+    .ytp-player-content.ytp-iv-drawer-enabled {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+    }
   </style>
 </head>
 <body>
@@ -208,6 +222,7 @@
     <nav>
       <a href="#" class="sidebar-link" data-page="manage-course.html">Manage Courses</a>
       <a href="#" class="sidebar-link" data-page="manage-user.html">Manage Users</a>
+      <a href="#" class="sidebar-link" data-page="manage-tests.html">Manage Tests</a>
       <!-- Removed Manage Students link as per user request -->
     </nav>
     <div>
@@ -219,7 +234,10 @@
   <div id="main-content">
     <div style="padding: 1.5rem; max-width: 900px; margin: 2rem auto; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
       <h1 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 1.5rem;">Manage Courses</h1>
-      <button id="add-btn" class="btn-primary">Add New Course</button>
+      <div class="flex gap-3 flex-wrap">
+        <button id="add-btn" class="btn-primary">Add New Course</button>
+        <button id="open-tests-iframe" class="btn-primary" aria-label="Create Test Series">Create Test Series</button>
+      </div>
       <div id="form-container" class="form-container">
         <h2 id="form-title" style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem;">Add Course</h2>
         <form id="course-form">
@@ -300,12 +318,18 @@
       </div>
     `;
 
+
+
     /**
      * Dynamically loads and displays a page in the main content area without full page reload
      * @param {string} page - The filename of the page to load (e.g., 'manage-user.html')
      */
     async function loadPage(page) {
       try {
+        if (!page) {
+          console.debug('loadPage called with empty page, skipping');
+          return;
+        }
         const response = await fetch(page);
         const html = await response.text();
         const parser = new DOMParser();
@@ -424,7 +448,7 @@
     function getEmbedUrl(url) {
       const videoId = extractVideoID(url);
       if (videoId) {
-        return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&iv_load_policy=3&showinfo=0`;
+        return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&showinfo=0&cc_load_policy=0&disablekb=1&fs=0&playsinline=1&end=9999`;
       }
       // Handle Google Drive
       if (url.includes('drive.google.com')) {
@@ -763,6 +787,14 @@
      * Attaches event listeners to form elements and buttons
      */
     function attachEventListeners() {
+      const testsBtn = document.getElementById('open-tests-iframe');
+      if (testsBtn) {
+        testsBtn.addEventListener('click', () => {
+          // Switch to tests iframe view when button clicked
+          setActiveLink('manage-tests.html');
+          showTestsIframe();
+        });
+      }
       // Show form for adding
       document.getElementById('add-btn').addEventListener('click', () => {
         editingId = null;
@@ -918,16 +950,20 @@
 
     for (const link of sidebarLinks) {
       link.addEventListener('click', (e) => {
-        e.preventDefault();
         const page = e.target.dataset.page;
+        if (!page) {
+          // No data-page: allow default navigation (e.g., plain href)
+          return;
+        }
+        e.preventDefault();
         if (page === 'manage-course.html') {
           mainContent.innerHTML = courseContent;
           attachEventListeners();
           loadCourses();
         } else if (page === 'manage-user.html') {
-          mainContent.innerHTML = userContent;
-          attachUserEventListeners();
-          loadUsers();
+          showUsersIframe();
+        } else if (page === 'manage-tests.html') {
+          showTestsIframe();
         } else {
           loadPage(page);
         }
@@ -936,6 +972,28 @@
     }
 
     // Load manage courses by default on page load
+    // Render manage-tests.html inside an iframe within mainContent
+    function showTestsIframe() {
+      mainContent.innerHTML = `
+        <div style="padding: 1.5rem; max-width: 1200px; margin: 2rem auto; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); height: calc(100vh - 6rem); display: flex; flex-direction: column;">
+          <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 1rem;">Manage Tests</h1>
+          <iframe src="manage-tests.html" title="Manage Tests" style="flex: 1; width: 100%; border: 1px solid #e2e8f0; border-radius: 8px;" loading="lazy"></iframe>
+        </div>
+      `;
+    }
+
+
+
+    // Render manage-user.html inside an iframe within mainContent
+    function showUsersIframe() {
+      mainContent.innerHTML = `
+        <div style="padding: 1.5rem; max-width: 1200px; margin: 2rem auto; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); height: calc(100vh - 6rem); display: flex; flex-direction: column;">
+          <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 1rem;">Manage Users</h1>
+          <iframe src="manage-user.html" title="Manage Users" style="flex: 1; width: 100%; border: 1px solid #e2e8f0; border-radius: 8px;" loading="lazy"></iframe>
+        </div>
+      `;
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
       try {
         // Start database handshake
