@@ -703,14 +703,25 @@
 
       /**
        * Fetches metadata for the current input URL and shows preview if available
+       * @param {boolean} clearOnFail - Whether to clear the input if metadata fetch fails
        */
-      const fetchMetadata = async () => {
+      const fetchMetadata = async (clearOnFail = false) => {
         const url = input.value.trim();
         if (url && (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('videoplayback'))) {
           // Fetch metadata for YouTube videos
           const metadata = await fetchYouTubeMetadata(url);
           if (metadata) {
             showPreview(div, metadata);
+          } else {
+            // Hide any existing preview
+            const preview = div.querySelector('.video-preview');
+            if (preview) preview.style.display = 'none';
+            div.metadata = null;
+            if (clearOnFail) {
+              // Show error notification and clear input
+              alert('Failed to fetch video metadata. Please check the URL and try again.');
+              input.value = '';
+            }
           }
         } else {
           // Hide preview for non-YouTube videos (Google Drive, etc.)
@@ -721,8 +732,8 @@
       };
 
       // Add event listeners for automatic metadata fetching
-      input.addEventListener('paste', () => setTimeout(fetchMetadata, 100)); // Delay to allow paste to complete
-      input.addEventListener('blur', fetchMetadata); // Fetch when user leaves input field
+      input.addEventListener('paste', () => setTimeout(() => fetchMetadata(true), 100)); // Clear on fail for paste
+      input.addEventListener('blur', () => fetchMetadata(false)); // Don't clear on fail for blur
 
       // Add remove button functionality
       removeBtn.addEventListener('click', () => div.remove());
@@ -732,7 +743,7 @@
 
       // If initial value is provided and it's a YouTube URL, fetch metadata immediately
       if (value && (value.includes('youtube.com') || value.includes('youtu.be') || value.includes('videoplayback'))) {
-        fetchMetadata();
+        fetchMetadata(false);
       }
     }
 
