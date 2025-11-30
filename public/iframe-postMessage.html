@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Message Sender</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+        }
+
+        input {
+            margin: 10px;
+            padding: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Test Message Sender</h1>
+    <p>Use these buttons to send test messages to the parent window.</p>
+
+    <h2>Payment Messages</h2>
+    <button onclick="sendPaymentMessage()">Send Payment Process</button>
+    <button onclick="sendStripeInit()">Init Stripe Payment</button>
+    <button onclick="sendPayPalInit()">Init PayPal Payment</button>
+
+    <h2>Notification Messages</h2>
+    <button onclick="sendNotification()">Send Notification</button>
+
+    <h2>Custom Message</h2>
+    <input type="text" id="customType" placeholder="Message type" value="custom">
+    <input type="text" id="customData" placeholder="Message data (JSON)" value='{"test": "data"}'>
+    <button onclick="sendCustomMessage()">Send Custom Message</button>
+
+    <script>
+        function sendMessage(message) {
+            window.parent.postMessage(message, '*');
+            console.log('Sent message:', message);
+        }
+
+        function sendPaymentMessage() {
+            sendMessage({
+                type: 'payment',
+                action: 'process',
+                data: { amount: 100, currency: 'USD', description: 'Test purchase' }
+            });
+        }
+
+        function sendStripeInit() {
+            sendMessage({
+                type: 'payment',
+                action: 'initializeStripe',
+                data: { amount: 100, currency: 'USD' }
+            });
+        }
+
+        function sendPayPalInit() {
+            sendMessage({
+                type: 'payment',
+                action: 'initializePayPal',
+                data: { amount: 100, currency: 'USD' }
+            });
+        }
+
+        function sendNotification() {
+            sendMessage({
+                type: 'notification',
+                action: 'send',
+                data: { title: 'Test Notification', body: 'This is a test message' }
+            });
+        }
+
+        function sendCustomMessage() {
+            const type = document.getElementById('customType').value;
+            const data = document.getElementById('customData').value;
+            try {
+                const parsedData = JSON.parse(data);
+                sendMessage({
+                    type: type,
+                    ...parsedData
+                });
+            } catch (e) {
+                alert('Invalid JSON in data field');
+            }
+        }
+
+        // Listen for messages from parent (optional)
+        window.addEventListener('message', (event) => {
+            console.log('Received message from parent:', event.data);
+        });
+    </script>
+</body>
+
+</html>
