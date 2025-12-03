@@ -284,6 +284,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Update guidelines
         renderGuidelines(question);
+
+        // Update hint UI
+        try {
+            const hintToggle = document.getElementById('hint-toggle');
+            const hintText = document.getElementById('hint-text');
+            if (hintToggle && hintText) {
+                if (question.hint) {
+                    hintToggle.style.display = 'inline-block';
+                    hintText.style.display = 'none';
+                    hintText.innerHTML = question.hint;
+                    hintToggle.textContent = 'Show Hint';
+                    hintToggle.onclick = () => {
+                        const isVisible = hintText.style.display !== 'none';
+                        hintText.style.display = isVisible ? 'none' : 'block';
+                        hintToggle.textContent = isVisible ? 'Show Hint' : 'Hide Hint';
+                    };
+                } else {
+                    hintToggle.style.display = 'none';
+                    hintText.style.display = 'none';
+                    hintText.innerHTML = '';
+                    hintToggle.onclick = null;
+                }
+            }
+        } catch (e) {
+            console.error('Hint rendering error', e);
+        }
     }
 
     function renderOptions(question) {
@@ -375,19 +401,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const navBtn = document.createElement('button');
             navBtn.className = 'nav-btn';
             navBtn.textContent = index + 1;
-
+            // Mark current and answered state for visual feedback; always allow jumping
             if (index === currentQuestionIndex) {
                 navBtn.classList.add('current');
-            } else if (index < currentQuestionIndex) {
-                // Previous questions are completed and locked
-                navBtn.classList.add('completed');
-                navBtn.disabled = true;
-                navBtn.title = 'Question completed - cannot go back';
-            } else {
-                // Future questions are locked
-                navBtn.classList.add('locked');
-                navBtn.disabled = true;
-                navBtn.title = 'Complete current question first';
             }
 
             // Check if question is answered (for visual feedback)
@@ -403,7 +419,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (isAnswered && index <= currentQuestionIndex) {
                 navBtn.classList.add('answered');
             }
+            // Title / tooltip
+            navBtn.title = `Go to Question ${index + 1}`;
 
+            // Always allow jumping to any question (forward or backward)
             navBtn.addEventListener('click', () => goToQuestion(index));
             navGrid.appendChild(navBtn);
         }
@@ -415,6 +434,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateNavigationButtons() {
         const nextBtn = document.getElementById('next-btn');
         const submitBtn = document.getElementById('submit-btn');
+        const prevBtn = document.getElementById('prev-btn');
 
         if (!testData?.questions) return;
 
@@ -435,6 +455,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        // Show prev button if not on first question
+        if (prevBtn) {
+            if (currentQuestionIndex > 0) {
+                prevBtn.style.display = 'flex';
+                prevBtn.disabled = false;
+            } else {
+                prevBtn.style.display = 'none';
+            }
+        }
+
         // Show submit button if current question is answered and it's the last question
         if (submitBtn) {
             if (isCurrentAnswered && currentQuestionIndex === testData.questions.length - 1) {
@@ -446,14 +476,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function goToQuestion(index) {
-        // Only allow going to current question or forward (not backward)
-        if (index < currentQuestionIndex) {
-            return; // Cannot go back to previous questions
-        }
-
-        if (index > currentQuestionIndex + 1) {
-            return; // Can only go to next question, not skip ahead
-        }
+        // Allow jumping to any valid question index (forward or backward)
+        if (!testData?.questions) return;
+        if (index < 0 || index >= testData.questions.length) return;
 
         currentQuestionIndex = index;
         sessionData.currentIndex = index;
@@ -505,6 +530,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('next-btn')?.addEventListener('click', function() {
         if (currentQuestionIndex < testData.questions.length - 1) {
             goToQuestion(currentQuestionIndex + 1);
+        }
+    });
+
+    document.getElementById('prev-btn')?.addEventListener('click', function() {
+        if (currentQuestionIndex > 0) {
+            goToQuestion(currentQuestionIndex - 1);
         }
     });
 

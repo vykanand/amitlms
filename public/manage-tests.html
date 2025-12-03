@@ -1,251 +1,417 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Manage Tests</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="js/loading-overlay.js"></script>
-  <script src="js/db-handshake.js"></script>
-  <style>
-    body { background: #f5f7fa; color: #2d3748; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    .btn-primary { background: linear-gradient(90deg, #2c5aa0, #b83280); color: #ffffff; padding: 0.5rem 1.25rem; border-radius: 8px; font-weight: 600; border: none; cursor: pointer; }
-    .btn-primary:hover { background: linear-gradient(90deg, #2c5282, #b83280); }
-    .card { background: #fff; border-radius: 12px; padding: 1rem 1.25rem; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
-    .form-container { background: #fff; border-radius: 12px; padding: 1rem 1.25rem; box-shadow: 0 8px 24px rgba(0,0,0,0.1); display: none; }
-    .form-group { margin-bottom: 0.75rem; }
-    .form-group label { display:block; font-weight:600; margin-bottom:0.25rem; }
-    .form-group input, .form-group textarea, .form-group select { width:100%; padding:0.5rem; border:1px solid #e2e8f0; border-radius:8px; }
-  </style>
-</head>
-<body>
-  <div class="max-w-5xl mx-auto p-6">
-    <div class="flex items-center justify-between mb-6"></div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manage Tests</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/loading-overlay.js"></script>
+    <script src="js/db-handshake.js"></script>
+    <style>
+      body {
+        background: #f5f7fa;
+        color: #2d3748;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+      .btn-primary {
+        background: linear-gradient(90deg, #2c5aa0, #b83280);
+        color: #ffffff;
+        padding: 0.5rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+      }
+      .btn-primary:hover {
+        background: linear-gradient(90deg, #2c5282, #b83280);
+      }
+      .card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      }
+      .form-container {
+        background: #fff;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        display: none;
+      }
+      .form-group {
+        margin-bottom: 0.75rem;
+      }
+      .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+      }
+      .form-group input,
+      .form-group textarea,
+      .form-group select {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="max-w-5xl mx-auto p-6">
+      <div class="flex items-center justify-between mb-6"></div>
 
-    <button id="add-series-btn" class="btn-primary mb-4">Add New Test Series</button>
+      <button id="add-series-btn" class="btn-primary mb-4">
+        Add New Test Series
+      </button>
 
-    <div id="series-form" class="form-container">
-      <h2 id="series-form-title" class="text-xl font-semibold mb-3">Add Test Series</h2>
-      <form id="test-series-form">
-        <div class="form-group">
-          <label for="series-title">Title</label>
-          <input type="text" id="series-title" required />
-        </div>
-        <div class="form-group">
-          <label for="series-desc">Description</label>
-          <textarea id="series-desc" rows="3" required></textarea>
-        </div>
-        <div class="form-group">
-          <label for="series-price">Price (INR)</label>
-          <input type="number" id="series-price" step="0.01" required />
-        </div>
-        <div class="form-group">
-          <label for="series-image">Image URL</label>
-          <div class="flex items-start gap-3">
-            <input type="url" id="series-image" placeholder="https://..." required class="flex-1" />
-            <img id="series-image-preview" alt="Preview" class="w-20 h-20 object-cover rounded-md border hidden" />
+      <div id="series-form" class="form-container">
+        <h2 id="series-form-title" class="text-xl font-semibold mb-3">
+          Add Test Series
+        </h2>
+        <form id="test-series-form">
+          <div class="form-group">
+            <label for="series-title">Title</label>
+            <input type="text" id="series-title" required />
           </div>
-          <small class="text-gray-500">Paste a direct image URL (JPG/PNG/WebP). A preview will appear here.</small>
-        </div>
-        <div class="form-group">
-          <label>Questions</label>
-          <div id="questions-container" class="space-y-3"></div>
-          <div class="flex gap-2 mt-2">
-            <button type="button" id="add-mcq" class="btn-primary">Add MCQ</button>
-            <button type="button" id="add-desc" class="btn-primary">Add Descriptive</button>
+          <div class="form-group">
+            <label for="series-desc">Description</label>
+            <textarea id="series-desc" rows="3" required></textarea>
           </div>
-        </div>
-        <div class="mt-3">
-          <button type="submit" class="btn-primary">Save</button>
-          <button type="button" id="cancel-series" class="btn-primary" style="background:#e53e3e">Cancel</button>
-        </div>
-      </form>
+          <div class="form-group">
+            <label for="series-price">Price (INR)</label>
+            <input type="number" id="series-price" step="0.01" required />
+          </div>
+          <div class="form-group">
+            <label for="series-image">Image URL</label>
+            <div class="flex items-start gap-3">
+              <input
+                type="url"
+                id="series-image"
+                placeholder="https://..."
+                required
+                class="flex-1"
+              />
+              <img
+                id="series-image-preview"
+                alt="Preview"
+                class="w-20 h-20 object-cover rounded-md border hidden"
+              />
+            </div>
+            <small class="text-gray-500"
+              >Paste a direct image URL (JPG/PNG/WebP). A preview will appear
+              here.</small
+            >
+          </div>
+          <div class="form-group">
+            <label>Questions</label>
+            <div id="questions-container" class="space-y-3"></div>
+            <div class="flex gap-2 mt-2">
+              <button type="button" id="add-mcq" class="btn-primary">
+                Add MCQ
+              </button>
+              <button type="button" id="add-desc" class="btn-primary">
+                Add Descriptive
+              </button>
+            </div>
+          </div>
+          <div class="mt-3">
+            <button type="submit" class="btn-primary">Save</button>
+            <button
+              type="button"
+              id="cancel-series"
+              class="btn-primary"
+              style="background: #e53e3e"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div id="series-list" class="space-y-3">
+        <!-- series cards -->
+      </div>
     </div>
 
-    <div id="series-list" class="space-y-3">
-      <!-- series cards -->
-    </div>
-  </div>
+    <script src="js/tests.js"></script>
+    <script>
+      // Basic page wiring with debug logs
+      const log = (...a) => console.debug("[ManageTests]", ...a);
+      let editingId = null;
 
-  <script src="js/tests.js"></script>
-  <script>
-    // Basic page wiring with debug logs
-    const log = (...a)=>console.debug('[ManageTests]',...a);
-    let editingId = null;
-
-    function questionBlock(type, data={}){
-      const id = 'q_'+Math.random().toString(36).slice(2);
-      const wrapper = document.createElement('div');
-      wrapper.className = 'card';
-      wrapper.dataset.qid = id;
-      if(type==='mcq'){
-        wrapper.innerHTML = `
+      function questionBlock(type, data = {}) {
+        const id = "q_" + Math.random().toString(36).slice(2);
+        const wrapper = document.createElement("div");
+        wrapper.className = "card";
+        wrapper.dataset.qid = id;
+        if (type === "mcq") {
+          wrapper.innerHTML = `
           <div class="form-group"><label>Type</label><input value="MCQ" disabled /></div>
-          <div class="form-group"><label>Question</label><textarea rows="2" class="q-text">${data.text||''}</textarea></div>
+          <div class="form-group"><label>Question</label><textarea rows="2" class="q-text">${
+            data.text || ""
+          }</textarea></div>
+          <div class="form-group"><label>Hint (optional)</label><textarea rows="2" class="q-hint">${
+            data.hint || ""
+          }</textarea></div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div class="form-group"><label>Option A</label><input class="q-a" value="${data.a||''}"/></div>
-            <div class="form-group"><label>Option B</label><input class="q-b" value="${data.b||''}"/></div>
-            <div class="form-group"><label>Option C</label><input class="q-c" value="${data.c||''}"/></div>
-            <div class="form-group"><label>Option D</label><input class="q-d" value="${data.d||''}"/></div>
+            <div class="form-group"><label>Option A</label><input class="q-a" value="${
+              data.a || ""
+            }"/></div>
+            <div class="form-group"><label>Option B</label><input class="q-b" value="${
+              data.b || ""
+            }"/></div>
+            <div class="form-group"><label>Option C</label><input class="q-c" value="${
+              data.c || ""
+            }"/></div>
+            <div class="form-group"><label>Option D</label><input class="q-d" value="${
+              data.d || ""
+            }"/></div>
           </div>
           <div class="form-group"><label>Correct Option</label>
             <select class="q-correct">
-              <option ${data.correct==='A'?'selected':''}>A</option>
-              <option ${data.correct==='B'?'selected':''}>B</option>
-              <option ${data.correct==='C'?'selected':''}>C</option>
-              <option ${data.correct==='D'?'selected':''}>D</option>
+              <option ${data.correct === "A" ? "selected" : ""}>A</option>
+              <option ${data.correct === "B" ? "selected" : ""}>B</option>
+              <option ${data.correct === "C" ? "selected" : ""}>C</option>
+              <option ${data.correct === "D" ? "selected" : ""}>D</option>
             </select>
           </div>
           <div class="text-right"><button type="button" class="btn-primary remove-q" style="background:#e53e3e">Remove</button></div>
         `;
-      } else {
-        wrapper.innerHTML = `
+        } else {
+          wrapper.innerHTML = `
           <div class="form-group"><label>Type</label><input value="Descriptive" disabled /></div>
-          <div class="form-group"><label>Question</label><textarea rows="3" class="q-text">${data.text||''}</textarea></div>
-          <div class="form-group"><label>Guidelines (optional)</label><textarea rows="2" class="q-guidelines">${data.guidelines||''}</textarea></div>
+          <div class="form-group"><label>Question</label><textarea rows="3" class="q-text">${
+            data.text || ""
+          }</textarea></div>
+          <div class="form-group"><label>Hint (optional)</label><textarea rows="2" class="q-hint">${
+            data.hint || ""
+          }</textarea></div>
+          <div class="form-group"><label>Guidelines (optional)</label><textarea rows="2" class="q-guidelines">${
+            data.guidelines || ""
+          }</textarea></div>
           <div class="text-right"><button type="button" class="btn-primary remove-q" style="background:#e53e3e">Remove</button></div>
         `;
-      }
-      wrapper.querySelector('.remove-q').addEventListener('click',()=>wrapper.remove());
-      return wrapper;
-    }
-
-    function collectQuestions(){
-      const blocks = Array.from(document.querySelectorAll('#questions-container > .card'));
-      const result = blocks.map(b=>{
-        const isMcq = !!b.querySelector('.q-a');
-        if(isMcq){
-          return { type:'mcq', text:b.querySelector('.q-text').value.trim(), a:b.querySelector('.q-a').value.trim(), b:b.querySelector('.q-b').value.trim(), c:b.querySelector('.q-c').value.trim(), d:b.querySelector('.q-d').value.trim(), correct:b.querySelector('.q-correct').value };
         }
-        return { type:'desc', text:b.querySelector('.q-text').value.trim(), guidelines:(b.querySelector('.q-guidelines')?.value||'').trim() };
-      });
-      log('collectQuestions', result);
-      return result;
-    }
-
-    function populateQuestions(questions){
-      const container = document.getElementById('questions-container');
-      container.innerHTML = '';
-      for(const q of questions||[]){
-        container.appendChild(questionBlock(q.type==='mcq'?'mcq':'desc', q));
+        wrapper
+          .querySelector(".remove-q")
+          .addEventListener("click", () => wrapper.remove());
+        return wrapper;
       }
-    }
 
-    function renderSeriesList(series){
-      const list = document.getElementById('series-list');
-      if(!series || series.length===0){ list.innerHTML = '<p class="text-gray-500 text-center">No test series yet.</p>'; return; }
-      list.innerHTML = series.map(s=>`
+      function collectQuestions() {
+        const blocks = Array.from(
+          document.querySelectorAll("#questions-container > .card")
+        );
+        const result = blocks.map((b) => {
+          const isMcq = !!b.querySelector(".q-a");
+          if (isMcq) {
+            return {
+              type: "mcq",
+              text: b.querySelector(".q-text").value.trim(),
+              a: b.querySelector(".q-a").value.trim(),
+              b: b.querySelector(".q-b").value.trim(),
+              c: b.querySelector(".q-c").value.trim(),
+              d: b.querySelector(".q-d").value.trim(),
+              correct: b.querySelector(".q-correct").value,
+              hint: (b.querySelector(".q-hint")?.value || "").trim(),
+            };
+          }
+          return {
+            type: "desc",
+            text: b.querySelector(".q-text").value.trim(),
+            guidelines: (b.querySelector(".q-guidelines")?.value || "").trim(),
+            hint: (b.querySelector(".q-hint")?.value || "").trim(),
+          };
+        });
+        log("collectQuestions", result);
+        return result;
+      }
+
+      function populateQuestions(questions) {
+        const container = document.getElementById("questions-container");
+        container.innerHTML = "";
+        for (const q of questions || []) {
+          container.appendChild(
+            questionBlock(q.type === "mcq" ? "mcq" : "desc", q)
+          );
+        }
+      }
+
+      function renderSeriesList(series) {
+        const list = document.getElementById("series-list");
+        if (!series || series.length === 0) {
+          list.innerHTML =
+            '<p class="text-gray-500 text-center">No test series yet.</p>';
+          return;
+        }
+        list.innerHTML = series
+          .map(
+            (s) => `
         <div class="card flex justify-between items-start">
           <div class="flex gap-4 items-start">
-            ${s.imageUrl ? `<img src="${s.imageUrl}" alt="${s.title||'Test'}" class="w-24 h-24 object-cover rounded-md border" onerror="this.style.display='none'"/>` : ''}
+            ${
+              s.imageUrl
+                ? `<img src="${s.imageUrl}" alt="${
+                    s.title || "Test"
+                  }" class="w-24 h-24 object-cover rounded-md border" onerror="this.style.display='none'"/>`
+                : ""
+            }
             <div>
               <div class="text-lg font-semibold">${s.title}</div>
-              <div class="text-sm text-gray-600">${s.description||''}</div>
-              <div class="text-sm text-gray-600">Questions: ${s.questions?.length||0}</div>
-              <div class="text-sm text-gray-600 font-semibold">Price: ${s.price?`₹${s.price}`:'Free'}</div>
+              <div class="text-sm text-gray-600">${s.description || ""}</div>
+              <div class="text-sm text-gray-600">Questions: ${
+                s.questions?.length || 0
+              }</div>
+              <div class="text-sm text-gray-600 font-semibold">Price: ${
+                s.price ? `₹${s.price}` : "Free"
+              }</div>
             </div>
           </div>
           <div class="flex gap-3">
             <button class="btn-primary edit" data-id="${s.id}">Edit</button>
-            <button class="btn-primary delete" style="background:#e53e3e" data-id="${s.id}">Delete</button>
+            <button class="btn-primary delete" style="background:#e53e3e" data-id="${
+              s.id
+            }">Delete</button>
           </div>
         </div>
-      `).join('');
-      list.querySelectorAll('button.edit').forEach(btn=>btn.addEventListener('click', async (e)=>{
-        const id = e.currentTarget.dataset.id;
-        const s = await TestsApi.getSeriesById(id);
-        editingId = id;
-        document.getElementById('series-form-title').textContent = 'Edit Test Series';
-        document.getElementById('series-title').value = s.title;
-        document.getElementById('series-desc').value = s.description;
-        document.getElementById('series-price').value = s.price||0;
-        document.getElementById('series-image').value = s.imageUrl||'';
-        // refresh preview after setting value
-        const _imgInput = document.getElementById('series-image');
-        if (_imgInput) _imgInput.dispatchEvent(new Event('input'));
-        populateQuestions(s.questions);
-        document.getElementById('series-form').style.display = 'block';
-      }));
-      list.querySelectorAll('button.delete').forEach(btn=>btn.addEventListener('click', async (e)=>{
-        const id = e.currentTarget.dataset.id;
-        if(confirm('Delete this test series?')){ await TestsApi.deleteSeries(id); await bootstrap(); }
-      }));
-    }
-
-    async function bootstrap(){
-      const series = await TestsApi.getAllSeries();
-      renderSeriesList(series);
-    }
-
-    document.addEventListener('DOMContentLoaded', async ()=>{
-      // Live image preview handler
-      const imgInput = document.getElementById('series-image');
-      const imgPreview = document.getElementById('series-image-preview');
-      const updatePreview = () => {
-        const url = (imgInput?.value||'').trim();
-        if (!imgPreview) return;
-        if (!url) { imgPreview.classList.add('hidden'); imgPreview.removeAttribute('src'); return; }
-        try {
-          imgPreview.onerror = () => { imgPreview.classList.add('hidden'); };
-          imgPreview.onload = () => { imgPreview.classList.remove('hidden'); };
-          imgPreview.src = url;
-        } catch {
-          imgPreview.classList.add('hidden');
-        }
-      };
-      if (imgInput) {
-        imgInput.addEventListener('input', updatePreview);
-        imgInput.addEventListener('paste', () => setTimeout(updatePreview, 0));
-        // initialize preview if value preset on edit
-        setTimeout(updatePreview, 0);
+      `
+          )
+          .join("");
+        list.querySelectorAll("button.edit").forEach((btn) =>
+          btn.addEventListener("click", async (e) => {
+            const id = e.currentTarget.dataset.id;
+            const s = await TestsApi.getSeriesById(id);
+            editingId = id;
+            document.getElementById("series-form-title").textContent =
+              "Edit Test Series";
+            document.getElementById("series-title").value = s.title;
+            document.getElementById("series-desc").value = s.description;
+            document.getElementById("series-price").value = s.price || 0;
+            document.getElementById("series-image").value = s.imageUrl || "";
+            // refresh preview after setting value
+            const _imgInput = document.getElementById("series-image");
+            if (_imgInput) _imgInput.dispatchEvent(new Event("input"));
+            populateQuestions(s.questions);
+            document.getElementById("series-form").style.display = "block";
+          })
+        );
+        list.querySelectorAll("button.delete").forEach((btn) =>
+          btn.addEventListener("click", async (e) => {
+            const id = e.currentTarget.dataset.id;
+            if (confirm("Delete this test series?")) {
+              await TestsApi.deleteSeries(id);
+              await bootstrap();
+            }
+          })
+        );
       }
 
-      await initializeDatabaseHandshake({
-        retryAttempts: 2,
-        retryDelay: 2000,
-        overlayOptions: { title: 'Loading Tests...', message: 'Please wait...', size: 'small', theme: 'default' },
-        onReady: ()=>bootstrap(),
-        onError: ()=>bootstrap()
-      });
+      async function bootstrap() {
+        const series = await TestsApi.getAllSeries();
+        renderSeriesList(series);
+      }
 
-      document.getElementById('add-series-btn').addEventListener('click', ()=>{
-        editingId = null;
-        document.getElementById('series-form-title').textContent = 'Add Test Series';
-        document.getElementById('test-series-form').reset();
-        document.getElementById('series-form').style.display = 'block';
-        populateQuestions([]);
-      });
-
-      document.getElementById('cancel-series').addEventListener('click', ()=>{
-        document.getElementById('series-form').style.display = 'none';
-      });
-
-      document.getElementById('add-mcq').addEventListener('click', ()=>{
-        document.getElementById('questions-container').appendChild(questionBlock('mcq'));
-      });
-      document.getElementById('add-desc').addEventListener('click', ()=>{
-        document.getElementById('questions-container').appendChild(questionBlock('desc'));
-      });
-
-      document.getElementById('test-series-form').addEventListener('submit', async (e)=>{
-        e.preventDefault();
-        const payload = {
-          title: document.getElementById('series-title').value.trim(),
-          description: document.getElementById('series-desc').value.trim(),
-          price: Number.parseFloat(document.getElementById('series-price').value)||0,
-          imageUrl: document.getElementById('series-image').value.trim(),
-          questions: collectQuestions()
+      document.addEventListener("DOMContentLoaded", async () => {
+        // Live image preview handler
+        const imgInput = document.getElementById("series-image");
+        const imgPreview = document.getElementById("series-image-preview");
+        const updatePreview = () => {
+          const url = (imgInput?.value || "").trim();
+          if (!imgPreview) return;
+          if (!url) {
+            imgPreview.classList.add("hidden");
+            imgPreview.removeAttribute("src");
+            return;
+          }
+          try {
+            imgPreview.onerror = () => {
+              imgPreview.classList.add("hidden");
+            };
+            imgPreview.onload = () => {
+              imgPreview.classList.remove("hidden");
+            };
+            imgPreview.src = url;
+          } catch {
+            imgPreview.classList.add("hidden");
+          }
         };
-        if(!payload.imageUrl){
-          alert('Image URL is required');
-          return;
+        if (imgInput) {
+          imgInput.addEventListener("input", updatePreview);
+          imgInput.addEventListener("paste", () =>
+            setTimeout(updatePreview, 0)
+          );
+          // initialize preview if value preset on edit
+          setTimeout(updatePreview, 0);
         }
-        if(editingId){ await TestsApi.updateSeries(editingId, payload); }
-        else { await TestsApi.createSeries(payload); }
-        document.getElementById('series-form').style.display = 'none';
-        await bootstrap();
+
+        await initializeDatabaseHandshake({
+          retryAttempts: 2,
+          retryDelay: 2000,
+          overlayOptions: {
+            title: "Loading Tests...",
+            message: "Please wait...",
+            size: "small",
+            theme: "default",
+          },
+          onReady: () => bootstrap(),
+          onError: () => bootstrap(),
+        });
+
+        document
+          .getElementById("add-series-btn")
+          .addEventListener("click", () => {
+            editingId = null;
+            document.getElementById("series-form-title").textContent =
+              "Add Test Series";
+            document.getElementById("test-series-form").reset();
+            document.getElementById("series-form").style.display = "block";
+            populateQuestions([]);
+          });
+
+        document
+          .getElementById("cancel-series")
+          .addEventListener("click", () => {
+            document.getElementById("series-form").style.display = "none";
+          });
+
+        document.getElementById("add-mcq").addEventListener("click", () => {
+          document
+            .getElementById("questions-container")
+            .appendChild(questionBlock("mcq"));
+        });
+        document.getElementById("add-desc").addEventListener("click", () => {
+          document
+            .getElementById("questions-container")
+            .appendChild(questionBlock("desc"));
+        });
+
+        document
+          .getElementById("test-series-form")
+          .addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const payload = {
+              title: document.getElementById("series-title").value.trim(),
+              description: document.getElementById("series-desc").value.trim(),
+              price:
+                Number.parseFloat(
+                  document.getElementById("series-price").value
+                ) || 0,
+              imageUrl: document.getElementById("series-image").value.trim(),
+              questions: collectQuestions(),
+            };
+            if (!payload.imageUrl) {
+              alert("Image URL is required");
+              return;
+            }
+            if (editingId) {
+              await TestsApi.updateSeries(editingId, payload);
+            } else {
+              await TestsApi.createSeries(payload);
+            }
+            document.getElementById("series-form").style.display = "none";
+            await bootstrap();
+          });
       });
-    });
-  </script>
-</body>
+    </script>
+  </body>
 </html>
