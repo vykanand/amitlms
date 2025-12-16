@@ -291,14 +291,21 @@ document.addEventListener('DOMContentLoaded', function() {
             const hintText = document.getElementById('hint-text');
             if (hintToggle && hintText) {
                 if (question.hint) {
+                    // Show the info indicator and keep hint hidden initially
                     hintToggle.style.display = 'inline-block';
                     hintText.style.display = 'none';
                     hintText.innerHTML = question.hint;
-                    hintToggle.textContent = 'Show Hint';
+
+                    // Render an info icon inside the button and set accessible attributes
+                    hintToggle.innerHTML = '<i class="fas fa-info-circle"></i>';
+                    hintToggle.title = 'Show hint';
+                    hintToggle.setAttribute('aria-expanded', 'false');
+
                     hintToggle.onclick = () => {
                         const isVisible = hintText.style.display !== 'none';
                         hintText.style.display = isVisible ? 'none' : 'block';
-                        hintToggle.textContent = isVisible ? 'Show Hint' : 'Hide Hint';
+                        hintToggle.title = isVisible ? 'Show hint' : 'Hide hint';
+                        hintToggle.setAttribute('aria-expanded', String(!isVisible));
                     };
                 } else {
                     hintToggle.style.display = 'none';
