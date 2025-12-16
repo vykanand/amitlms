@@ -452,9 +452,9 @@ document.addEventListener('DOMContentLoaded', function() {
             (currentQuestion.type === 'desc' && currentAnswer !== undefined && currentAnswer !== null && currentAnswer.trim() !== '')
         );
 
-        // Show next button if current question is answered and not the last question
+        // Show next button if not the last question (available even if unanswered)
         if (nextBtn) {
-            if (isCurrentAnswered && currentQuestionIndex < testData.questions.length - 1) {
+            if (currentQuestionIndex < testData.questions.length - 1) {
                 nextBtn.style.display = 'flex';
                 nextBtn.disabled = false;
             } else {
@@ -472,10 +472,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Show submit button if current question is answered and it's the last question
+        // Show submit button on the last question regardless of answered state
         if (submitBtn) {
-            if (isCurrentAnswered && currentQuestionIndex === testData.questions.length - 1) {
+            if (currentQuestionIndex === testData.questions.length - 1) {
                 submitBtn.style.display = 'flex';
+                submitBtn.disabled = false;
             } else {
                 submitBtn.style.display = 'none';
             }
