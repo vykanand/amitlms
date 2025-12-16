@@ -1025,7 +1025,7 @@ body {
 
   .navigation-panel {
     width: 100%;
-    order: -1;
+    order: 0;
   }
 
   .nav-grid {
