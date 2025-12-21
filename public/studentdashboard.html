@@ -28,8 +28,8 @@
         margin: 0;
         font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
           "Helvetica Neue", Arial;
-        background: linear-gradient(180deg, #071021 0%, #081226 60%);
-        color: #e6eef8;
+        background: #ffffff;
+        color: #111827;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         padding: 1.25rem;
@@ -212,8 +212,9 @@
         font-weight: 600;
       }
       .test-status.completed {
-        background: rgba(34, 197, 94, 0.12);
-        color: #bbf7d0;
+        background: rgba(16, 185, 129, 0.12);
+        color: #065f46;
+        border: 1px solid rgba(16, 185, 129, 0.18);
       }
       .test-status.in-progress {
         background: rgba(250, 204, 21, 0.08);
@@ -941,7 +942,7 @@
               <p>Price: ₹${course.price}</p>
               <button onclick="addToCart(${
                 course.id
-              })" style="background: #007bff; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Add to Cart</button>
+              })" style="background: #007bff; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Payment</button>
             </div>
           </div>
         `
@@ -987,7 +988,7 @@
               <p>Price: ${test.price ? `₹${test.price}` : "Free"}</p>
               <button onclick="addTestToCart('${
                 test.id
-              }')" style="background: #28a745; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Add to Cart</button>
+              }')" style="background: #28a745; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Payment</button>
             </div>
           </div>
         `

@@ -284,23 +284,51 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Update guidelines
         renderGuidelines(question);
+            // Update hint UI visibility based on whether the question has been attempted
+            updateHintVisibility(currentQuestionIndex);
+    }
 
-        // Update hint UI
-        try {
-            const hintToggle = document.getElementById('hint-toggle');
-            const hintText = document.getElementById('hint-text');
-            if (hintToggle && hintText) {
-                if (question.hint) {
-                    // Show the info indicator and keep hint hidden initially
+        // Returns true if the question at `index` has been attempted by the user
+        function isQuestionAttempted(index) {
+            if (!testData?.questions) return false;
+            const q = testData.questions[index];
+            const ans = sessionData.answers && sessionData.answers[index];
+            if (!q) return false;
+            if (q.type === 'mcq') {
+                return ans !== undefined && ans !== '';
+            }
+            if (q.type === 'desc') {
+                return ans !== undefined && ans !== null && String(ans).trim() !== '';
+            }
+            return false;
+        }
+
+        // Show the hint toggle only after the question is attempted. Hint content is prepared
+        // whenever the question has a `hint` property, but the toggle remains hidden until attempt.
+        function updateHintVisibility(index) {
+            try {
+                const hintToggle = document.getElementById('hint-toggle');
+                const hintText = document.getElementById('hint-text');
+                if (!hintToggle || !hintText) return;
+
+                const q = testData?.questions?.[index];
+                if (!q || !q.hint) {
+                    hintToggle.style.display = 'none';
+                    hintText.style.display = 'none';
+                    hintText.innerHTML = '';
+                    hintToggle.onclick = null;
+                    return;
+                }
+
+                // Prepare hint content and attributes
+                hintText.innerHTML = q.hint;
+                hintToggle.innerHTML = '<i class="fas fa-info-circle"></i>';
+                hintToggle.title = 'Show hint';
+                hintToggle.setAttribute('aria-expanded', 'false');
+
+                if (isQuestionAttempted(index)) {
                     hintToggle.style.display = 'inline-block';
                     hintText.style.display = 'none';
-                    hintText.innerHTML = question.hint;
-
-                    // Render an info icon inside the button and set accessible attributes
-                    hintToggle.innerHTML = '<i class="fas fa-info-circle"></i>';
-                    hintToggle.title = 'Show hint';
-                    hintToggle.setAttribute('aria-expanded', 'false');
-
                     hintToggle.onclick = () => {
                         const isVisible = hintText.style.display !== 'none';
                         hintText.style.display = isVisible ? 'none' : 'block';
@@ -308,16 +336,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         hintToggle.setAttribute('aria-expanded', String(!isVisible));
                     };
                 } else {
+                    // Hide hint until the question is attempted
                     hintToggle.style.display = 'none';
                     hintText.style.display = 'none';
-                    hintText.innerHTML = '';
                     hintToggle.onclick = null;
                 }
+            } catch (e) {
+                console.error('Hint visibility error', e);
             }
-        } catch (e) {
-            console.error('Hint rendering error', e);
         }
-    }
 
     function renderOptions(question) {
         const optionsContainer = document.getElementById('options-container');
@@ -359,6 +386,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 sessionData.answers[currentQuestionIndex] = e.target.value;
                 autoSaveSession(); // Auto-save on answer change
                 updateNavigationButtons(); // Update navigation when answer changes
+                updateHintVisibility(currentQuestionIndex);
             });
 
             optionsContainer.appendChild(textarea);
@@ -394,6 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
         autoSaveSession(); // Auto-save on answer change
         renderNavigation();
         updateNavigationButtons(); // Update navigation when option is selected
+        updateHintVisibility(currentQuestionIndex);
     }
 
     function renderNavigation() {
@@ -462,7 +491,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Show prev button if not on first question
+        // Determine whether current question is attempted
+        const shouldShowOnAttempt = isCurrentAnswered;
+
+        // Show prev button if not on first question; keep hidden on first question
         if (prevBtn) {
             if (currentQuestionIndex > 0) {
                 prevBtn.style.display = 'flex';
@@ -472,13 +504,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Show submit button on the last question regardless of answered state
+        // Keep submit button visible; actual submission will check attempt state
         if (submitBtn) {
-            if (currentQuestionIndex === testData.questions.length - 1) {
-                submitBtn.style.display = 'flex';
-                submitBtn.disabled = false;
+            submitBtn.style.display = 'flex';
+            // Visual hint when not attempted
+            if (!shouldShowOnAttempt) {
+                submitBtn.title = 'Attempt the current question to enable submission';
+                submitBtn.style.opacity = '0.75';
             } else {
-                submitBtn.style.display = 'none';
+                submitBtn.title = '';
+                submitBtn.style.opacity = '';
             }
         }
     }
@@ -548,6 +583,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     document.getElementById('submit-btn')?.addEventListener('click', function() {
+        // Prevent submission of the current question if it hasn't been attempted
+        const isAttempted = isQuestionAttempted(currentQuestionIndex);
+        if (!isAttempted) {
+            alert('Please attempt the current question before submitting it.');
+            return;
+        }
+
         if (confirm('Are you sure you want to submit the test? This action cannot be undone.')) {
             sessionData.completed = true;
             saveSessionData();
