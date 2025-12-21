@@ -729,14 +729,22 @@
                     <span class="score-badge">${scorePercentage}%</span>
                   </div>
                   <div class="progress-details">
-                    <div class="progress-bar">
-                      <div class="progress-fill" style="width: ${scorePercentage}%"></div>
+                      <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${scorePercentage}%"></div>
+                      </div>
+                      <div class="progress-stats">
+                        <span>Right: ${evaluation.correct}</span>
+                        <span>Wrong: ${Math.max(
+                          0,
+                          evaluation.total - evaluation.correct
+                        )}</span>
+                        <span>Attempted: ${answeredQuestions}/${totalQuestions}</span>
+                        <span>Total: ${totalQuestions}</span>
+                        <span>Score: ${evaluation.score}/${
+                  evaluation.totalPossibleScore
+                }</span>
+                      </div>
                     </div>
-                    <div class="progress-stats">
-                      <span>MCQ: ${evaluation.correct}/${evaluation.total}</span>
-                      <span>Score: ${evaluation.score}/${evaluation.totalPossibleScore}</span>
-                    </div>
-                  </div>
                   <a href="test-runner.html?testId=${testId}" class="view-report-btn">
                     <i class="fas fa-chart-bar"></i> View Detailed Report
                   </a>
@@ -753,12 +761,12 @@
                     <h5>${title}</h5>
                     <span class="progress-badge">${percentage}%</span>
                   </div>
-                  <div class="progress-details">
+                    <div class="progress-details">
                     <div class="progress-bar">
                       <div class="progress-fill" style="width: ${percentage}%"></div>
                     </div>
                     <div class="progress-stats">
-                      <span>${answeredQuestions}/${totalQuestions} questions</span>
+                      <span>Attempted: ${answeredQuestions}/${totalQuestions}</span>
                       <span>Question ${
                         s.currentIndex + 1
                       } of ${totalQuestions}</span>
@@ -894,7 +902,7 @@
             ${testsHtml}
             <div style="margin-top: 1rem; padding: 1rem; background: #e8f5e8; border-radius: 8px; text-align: right;">
               <h3>Total: ₹${total}</h3>
-              <button onclick="payForCart(${total})" style="background: #28a745; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; font-size: 1rem; cursor: pointer;">Pay Now for All</button>
+              <button onclick="payForCart(${total})" style="background: #28a745; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; font-size: 1rem; cursor: pointer;">Proceed to payment</button>
             </div>
           `;
           } else {
