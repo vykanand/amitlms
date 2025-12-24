@@ -167,6 +167,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Escape HTML to prevent injected markup from affecting report visibility
+    function escapeHtml(unsafe) {
+        if (unsafe === undefined || unsafe === null) return '';
+        return String(unsafe)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    // Get option text robustly for keys like 'a' or 'A'
+    function getOptionText(question, key) {
+        if (!question || key === undefined || key === null) return '';
+        const k = String(key).trim();
+        if (!k) return '';
+        const candidates = [k, k.toLowerCase(), k.toUpperCase()];
+        for (const c of candidates) {
+            if (question[c] !== undefined && question[c] !== null && String(question[c]).trim() !== '') {
+                return String(question[c]);
+            }
+        }
+        return '';
+    }
+
     function evaluateTest() {
         if (!testData?.questions) return { correct: 0, total: 0, score: 0, descriptiveCount: 0 };
 
@@ -303,44 +328,19 @@ document.addEventListener('DOMContentLoaded', function() {
             return false;
         }
 
-        // Show the hint toggle only after the question is attempted. Hint content is prepared
-        // whenever the question has a `hint` property, but the toggle remains hidden until attempt.
+        // Do not show hints in the test-taking UI. Hints will be available in the
+        // detailed report only. This function keeps the hint elements hidden.
         function updateHintVisibility(index) {
             try {
                 const hintToggle = document.getElementById('hint-toggle');
                 const hintText = document.getElementById('hint-text');
                 if (!hintToggle || !hintText) return;
 
-                const q = testData?.questions?.[index];
-                if (!q || !q.hint) {
-                    hintToggle.style.display = 'none';
-                    hintText.style.display = 'none';
-                    hintText.innerHTML = '';
-                    hintToggle.onclick = null;
-                    return;
-                }
-
-                // Prepare hint content and attributes
-                hintText.innerHTML = q.hint;
-                hintToggle.innerHTML = '<i class="fas fa-info-circle"></i>';
-                hintToggle.title = 'Show hint';
-                hintToggle.setAttribute('aria-expanded', 'false');
-
-                if (isQuestionAttempted(index)) {
-                    hintToggle.style.display = 'inline-block';
-                    hintText.style.display = 'none';
-                    hintToggle.onclick = () => {
-                        const isVisible = hintText.style.display !== 'none';
-                        hintText.style.display = isVisible ? 'none' : 'block';
-                        hintToggle.title = isVisible ? 'Show hint' : 'Hide hint';
-                        hintToggle.setAttribute('aria-expanded', String(!isVisible));
-                    };
-                } else {
-                    // Hide hint until the question is attempted
-                    hintToggle.style.display = 'none';
-                    hintText.style.display = 'none';
-                    hintToggle.onclick = null;
-                }
+                // Always hide runner hint UI
+                hintToggle.style.display = 'none';
+                hintText.style.display = 'none';
+                hintText.innerHTML = '';
+                hintToggle.onclick = null;
             } catch (e) {
                 console.error('Hint visibility error', e);
             }
@@ -724,14 +724,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         </span>
                     </div>
                     <div class="question-content">
-                        <div class="question-text">${question.text || question.question || ''}</div>
+                        <div class="question-text">${escapeHtml(question.text || question.question || '')}</div>
             `;
 
             if (userAnswer) {
                 reportHtml += `
                     <div class="user-answer">
                         <div class="answer-label">Your Answer:</div>
-                        <div class="answer-text">${isMCQ ? `${userAnswer.toUpperCase()}. ${question[userAnswer] || 'Invalid option'}` : userAnswer}</div>
+                        <div class="answer-text">${isMCQ ? `${escapeHtml(String(userAnswer).toUpperCase())}. ${escapeHtml(getOptionText(question, userAnswer) || 'Invalid option')}` : escapeHtml(userAnswer)}</div>
                     </div>
                 `;
             }
@@ -740,7 +740,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 reportHtml += `
                     <div class="correct-answer">
                         <div class="answer-label">Correct Answer:</div>
-                        <div class="answer-text">${question.correct.toUpperCase()}. ${question[question.correct] || ''}</div>
+                        <div class="answer-text">${escapeHtml(String(question.correct).toUpperCase())}. ${escapeHtml(getOptionText(question, question.correct) || question.correctText || question.correct_answer || question.correctAnswer || '')}</div>
                     </div>
                 `;
             }
@@ -752,6 +752,37 @@ document.addEventListener('DOMContentLoaded', function() {
                         Score: ${sessionData.descriptiveScores[index]}/${question.type === 'desc' ? 1 : 1}
                     </div>
                 `;
+            }
+
+            // Include hints in the report for all questions (attempted or not).
+            try {
+                if (question.hint) {
+                    reportHtml += `
+                        <div class="report-hint" style="margin-top:0.75rem;padding:0.75rem;border-radius:8px;background:#fff3cd;border:1px solid #ffeeba;color:#856404;">
+                            <div class="answer-label">Hint:</div>
+                                <div class="hint-text" style="margin-top:0.25rem;">${escapeHtml(question.hint)}</div>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.error('Error adding hint to report', e);
+            }
+
+            // For descriptive questions, show a model/expected answer if available
+            try {
+                if (!isMCQ) {
+                    const modelAns = question.modelAnswer || question.solution || question.answer || question.correctText || question.correct_answer || question.correctAnswer;
+                    if (modelAns) {
+                        reportHtml += `
+                            <div class="correct-answer">
+                                <div class="answer-label">Expected / Model Answer:</div>
+                                    <div class="answer-text">${escapeHtml(modelAns)}</div>
+                            </div>
+                        `;
+                    }
+                }
+            } catch (e) {
+                console.error('Error adding model answer to report', e);
             }
 
             reportHtml += `

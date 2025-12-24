@@ -1440,6 +1440,19 @@ body {
   line-height: 1.5;
 }
 
+/* Report hint styling - visible by default in report preview */
+.report-hint {
+  margin-top: var(--space-3);
+}
+.report-hint .hint-text {
+  background: #fff3cd;
+  padding: var(--space-3);
+  border-radius: 8px;
+  border: 1px solid #ffeeba;
+  color: #856404;
+  line-height: 1.5;
+}
+
 .score-display {
   background: linear-gradient(135deg, var(--success), #059669);
   color: var(--white);
